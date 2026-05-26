@@ -11,3 +11,5 @@ content/published/
 content/.extra_diff_state.json
 *.log
 .DS_Store
+docs/.maintainer-local.md
+docs/PROJECT_STATE.md
