@@ -1,0 +1,24 @@
+services:
+  api:
+    build: ./backend
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./knowledge:/app/knowledge
+      - ./content:/app/content
+      - ./labs:/app/labs
+      - ./backend/data:/app/data
+    working_dir: /app
+    env_file:
+      - ./backend/.env
+    environment:
+      KNOWLEDGE_PATH: /app/knowledge
+      CONTENT_ROOT: /app/content
+      PROJECT_ROOT: /app
+
+  web:
+    build: ./web
+    ports:
+      - "5174:80"
+    depends_on:
+      - api

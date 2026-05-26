@@ -1,0 +1,5 @@
+{"query": "OpenClaw Gateway 是什么", "expected_source_ids": ["openclaw-gateway-001"]}
+{"query": "Harness 五支柱", "expected_source_ids": ["harness-five-pillars-001"]}
+{"query": "Hermes 持久记忆", "expected_source_ids": ["hermes-memory-001"]}
+{"query": "ReAct agent loop", "expected_source_ids": ["harness-agent-loop-001", "openclaw-agent-loop-001"]}
+{"query": "Skills 按需加载", "expected_source_ids": ["openclaw-skills-001"]}

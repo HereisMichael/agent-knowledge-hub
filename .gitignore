@@ -1,0 +1,13 @@
+backend/data/
+backend/.env
+web/node_modules/
+web/dist/
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+content/staging/
+content/published/
+content/.extra_diff_state.json
+*.log
+.DS_Store

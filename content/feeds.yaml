@@ -1,0 +1,10 @@
+# 每日更新源配置
+feeds:
+  - name: local_tech_seeds
+    type: local_seed
+    path: seeds/tech
+    target: tech
+  - name: local_interview_seeds
+    type: local_seed
+    path: seeds/interview
+    target: interview

@@ -1,0 +1,14 @@
+[
+  {
+    "file": "golden_tech.jsonl",
+    "recall_at_k": 1.0,
+    "hits": 5,
+    "total": 5
+  },
+  {
+    "file": "golden_interview.jsonl",
+    "recall_at_k": 1.0,
+    "hits": 2,
+    "total": 2
+  }
+]

@@ -1,0 +1,69 @@
+[
+  {
+    "id": "lab-rag-presales-mini",
+    "title": "迷你 Hybrid RAG 检索服务",
+    "effort_hours": 4,
+    "skills": ["rag", "python", "fastapi"],
+    "weakness_tags": ["rag", "retrieval"],
+    "prerequisites": ["Python 基础"],
+    "outcomes": ["能解释 BM25+向量混合检索", "能实现 /search 并返回 citation"],
+    "related_source_ids": ["harness-eval-001"],
+    "steps": ["复制 ingest/retriever", "准备 5 篇 Markdown", "实现 search API", "写 5 条 golden 评测"]
+  },
+  {
+    "id": "lab-draw-arch-mermaid",
+    "title": "5 分钟 Mermaid 架构图讲解",
+    "effort_hours": 2,
+    "weakness_tags": ["architecture"],
+    "prerequisites": ["了解三层架构"],
+    "outcomes": ["能在白板/文档画出接入-应用-数据层", "能口述 SLB/RDS/容灾"],
+    "related_source_ids": ["interview-guide-arch-001"],
+    "steps": ["选医教/互联网医院场景", "画 Mermaid", "录音 5 分钟讲解", "自检 RPO/RTO"]
+  },
+  {
+    "id": "lab-compliance-checklist",
+    "title": "等保三级检查清单 Bot",
+    "effort_hours": 3,
+    "weakness_tags": ["compliance"],
+    "outcomes": ["列出 10 条等保控制项与云产品映射"],
+    "steps": ["整理检查项表格", "映射 WAF/堡垒机/日志审计", "做问答卡片"]
+  },
+  {
+    "id": "lab-openclaw-skill-md",
+    "title": "编写 OpenClaw Skill.md",
+    "effort_hours": 3,
+    "weakness_tags": ["agent"],
+    "related_source_ids": ["openclaw-skills-001"],
+    "steps": ["阅读 Skills 文档", "写一个部署检查 Skill", "在 Gateway 中验证按需加载"]
+  },
+  {
+    "id": "lab-vendor-slb-compare",
+    "title": "三厂商负载均衡对照表",
+    "effort_hours": 2,
+    "weakness_tags": ["product"],
+    "related_source_ids": ["interview-vendor-slb-001"],
+    "steps": ["整理 ALB/CLB/SLB 特性", "补充计费与配额话术", "各写 3 道面试答法"]
+  },
+  {
+    "id": "lab-harness-react-loop",
+    "title": "手写最小 ReAct Agent Loop",
+    "effort_hours": 4,
+    "weakness_tags": ["agent", "architecture"],
+    "related_source_ids": ["harness-agent-loop-001"],
+    "steps": ["实现 tool 注册表", "循环：model→tool→feed", "加 max_steps 与停止条件"]
+  },
+  {
+    "id": "lab-aws-landing-zone",
+    "title": "AWS Landing Zone 概念草图",
+    "effort_hours": 4,
+    "weakness_tags": ["product"],
+    "steps": ["画出多账号 OU 结构", "标注 SCP、CloudTrail、GuardDuty", "对比阿里云资源目录"]
+  },
+  {
+    "id": "lab-meeting-to-srs",
+    "title": "会议纪要 → SRS 提纲",
+    "effort_hours": 3,
+    "weakness_tags": ["architecture", "rag"],
+    "steps": ["选一段会议记录", "提炼功能/非功能需求", "输出 SRS 目录与风险项"]
+  }
+]
