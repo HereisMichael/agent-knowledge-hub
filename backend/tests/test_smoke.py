@@ -102,6 +102,35 @@ def test_review_calendar():
     assert r.json()["year"] == 2026
 
 
+def test_settings_and_reference():
+    r = client.put(
+        "/api/settings",
+        json={"llm_model": "test-model", "force_demo": True},
+    )
+    assert r.status_code == 200
+    r2 = client.get("/api/quiz/next?vendor=aliyun")
+    qid = r2.json()["question"]["id"]
+    client.put(
+        f"/api/quiz/questions/{qid}/reference",
+        json={"reference_text": "多 AZ、SLB、RDS 主备、等保三级 WAF"},
+    )
+    r3 = client.post(
+        "/api/quiz/submit",
+        json={
+            "question_id": qid,
+            "answer_text": "使用 SLB 和 RDS",
+            "reference_answer": "多 AZ、SLB、RDS 主备、等保三级 WAF",
+            "save_reference": True,
+            "use_ai": False,
+        },
+    )
+    assert r3.status_code == 200
+    assert r3.json().get("reference_used") is True
+    r4 = client.get("/api/quiz/analytics")
+    assert r4.status_code == 200
+    assert r4.json()["summary"]["total_attempts"] >= 1
+
+
 def test_review_flow():
     r = client.get("/api/quiz/next?vendor=aliyun")
     qid = r.json()["question"]["id"]

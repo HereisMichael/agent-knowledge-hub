@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { progressRadar, quizStats } from "../api";
+import { progressRadar, quizAnalytics, quizStats } from "../api";
 import { RadarChart } from "../components/RadarChart";
 import { ReviewCalendar } from "../components/ReviewCalendar";
+import { ScoreHistoryTable } from "../components/ScoreHistoryTable";
 
 const VENDOR_LABEL: Record<string, string> = {
   aliyun: "阿里云",
@@ -22,10 +23,21 @@ export function ProgressPage() {
     review?: { total_cards: number; due_now: number };
   } | null>(null);
   const [radar, setRadar] = useState<RadarData | null>(null);
+  const [analytics, setAnalytics] = useState<{
+    summary: {
+      total_attempts: number;
+      questions_practiced: number;
+      overall_avg: number;
+      by_category: Record<string, number>;
+      by_vendor: Record<string, number>;
+    };
+    questions: Parameters<typeof ScoreHistoryTable>[0]["rows"];
+  } | null>(null);
 
   useEffect(() => {
     quizStats().then(setStats).catch(() => {});
     progressRadar().then(setRadar).catch(() => {});
+    quizAnalytics().then(setAnalytics).catch(() => {});
   }, []);
 
   if (!stats) {
@@ -60,6 +72,17 @@ export function ProgressPage() {
           </>
         )}
       </div>
+
+      {analytics && (
+        <div className="panel">
+          <h3 className="panel-header">答题水平（按题目）</h3>
+          <p className="empty-hint" style={{ marginBottom: "0.75rem" }}>
+            已练 {analytics.summary.questions_practiced} 题 · 总作答{" "}
+            {analytics.summary.total_attempts} 次 · 均分 {analytics.summary.overall_avg}
+          </p>
+          <ScoreHistoryTable rows={analytics.questions} />
+        </div>
+      )}
 
       <div className="panel">
         <h3 className="panel-header">复习日历（SM-2）</h3>

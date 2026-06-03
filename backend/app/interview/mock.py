@@ -14,6 +14,7 @@ from app.interview.stages import (
 )
 from app.labs.recommend import recommend_labs
 from app.llm.client import chat_json, chat_text
+from app.settings.service import resolve_llm
 
 COACH_SYSTEM = """你是阿里云/腾讯云/AWS 的资深 SA 面试官。
 规则：一次只问一个问题；根据候选人上一轮回答追问 1-2 次（挑战假设、要求量化）。
@@ -104,6 +105,10 @@ def handle_message(session_id: str, user_message: str, want_hint: bool = False) 
     )
 
 
+def _runtime(session: dict):
+    return resolve_llm(session.get("user_id", "default"))
+
+
 def _free_turn(session: dict, user_message: str, want_hint: bool) -> str:
     history = "\n".join(
         f"{t['role']}: {t['content'][:500]}" for t in session["transcript"][-8:]
@@ -111,15 +116,16 @@ def _free_turn(session: dict, user_message: str, want_hint: bool) -> str:
     if want_hint:
         user_message = f"[候选人请求提示] {user_message}"
     prompt = f"厂商：{session.get('vendor')}\n历史：\n{history}\n\n候选人最新：{user_message}"
-    return chat_text(COACH_SYSTEM, prompt)
+    return chat_text(COACH_SYSTEM, prompt, runtime=_runtime(session))
 
 
 def _structured_turn(session: dict, user_message: str, want_hint: bool) -> tuple[str, str | None]:
     stage = session.get("stage", "INTRO")
     idx = STRUCTURED_STAGES.index(stage) if stage in STRUCTURED_STAGES else 0
 
+    rt = _runtime(session)
     if want_hint:
-        return chat_text(COACH_SYSTEM, f"环节 {stage}，给阶梯提示，不要泄题：{user_message}"), None
+        return chat_text(COACH_SYSTEM, f"环节 {stage}，给阶梯提示，不要泄题：{user_message}", runtime=rt), None
 
     if stage == "ARCH":
         q = pick_question(vendor=session.get("vendor"), category="architecture")
@@ -127,6 +133,7 @@ def _structured_turn(session: dict, user_message: str, want_hint: bool) -> tuple
         reply = chat_text(
             COACH_SYSTEM,
             f"环节：架构题\n题目：{qtext}\n候选人回答：{user_message}\n请追问或进入下一环节。",
+            runtime=rt,
         )
         return reply + "\n\n（架构环节结束后可说「下一环节」进入产品题）", None
 
@@ -137,6 +144,7 @@ def _structured_turn(session: dict, user_message: str, want_hint: bool) -> tuple
         COACH_SYSTEM,
         f"当前环节：{stage}\n历史：{history}\n候选人：{user_message}\n"
         "若本环节信息足够，在回复末尾写 [NEXT_STAGE]",
+        runtime=rt,
     )
 
     new_stage = None
@@ -170,7 +178,11 @@ def finish_session(session_id: str) -> dict:
             "scores{structure,depth,tradeoff,compliance,communication}, "
             "highlights[], gaps[], answer_rewrite, suggested_lab_ids[]"
         )
-        report = chat_json(COACH_SYSTEM, f"生成面试报告：\n{history}")
+        report = chat_json(
+            COACH_SYSTEM,
+            f"生成面试报告：\n{history}",
+            runtime=resolve_llm(session.get("user_id", "default")),
+        )
 
     labs = recommend_labs(gaps=report.get("gaps", []), limit=3)
     report["recommended_labs"] = labs

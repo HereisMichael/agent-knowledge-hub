@@ -113,6 +113,40 @@ def _migrate_columns() -> None:
         if "stage_started_at" not in cols:
             c.execute("ALTER TABLE mock_sessions ADD COLUMN stage_started_at TEXT")
 
+        ua_cols = {row[1] for row in c.execute("PRAGMA table_info(user_answers)").fetchall()}
+        for col, ddl in (
+            ("reference_answer", "TEXT"),
+            ("feedback", "TEXT"),
+            ("model_name", "TEXT"),
+            ("comparison_detail", "TEXT"),
+        ):
+            if col not in ua_cols:
+                c.execute(f"ALTER TABLE user_answers ADD COLUMN {col} {ddl}")
+
+        c.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_settings (
+                user_id TEXT PRIMARY KEY,
+                llm_base_url TEXT,
+                llm_api_key TEXT,
+                llm_model TEXT,
+                force_demo INTEGER NOT NULL DEFAULT 0,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+        c.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_reference_answers (
+                user_id TEXT NOT NULL,
+                question_id TEXT NOT NULL,
+                reference_text TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                PRIMARY KEY (user_id, question_id)
+            )
+            """
+        )
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -127,15 +161,135 @@ def save_quiz_answer(
     answer_text: str,
     self_score: int | None,
     ai_score: int | None,
+    *,
+    reference_answer: str | None = None,
+    feedback: str | None = None,
+    model_name: str | None = None,
+    comparison_detail: dict | None = None,
 ) -> dict:
     aid = str(uuid.uuid4())
+    detail_json = json.dumps(comparison_detail, ensure_ascii=False) if comparison_detail else None
     with _conn() as c:
         c.execute(
-            """INSERT INTO user_answers (id, user_id, question_id, answer_text, self_score, ai_score, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (aid, user_id, question_id, answer_text, self_score, ai_score, _now()),
+            """INSERT INTO user_answers
+               (id, user_id, question_id, answer_text, self_score, ai_score, created_at,
+                reference_answer, feedback, model_name, comparison_detail)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                aid,
+                user_id,
+                question_id,
+                answer_text,
+                self_score,
+                ai_score,
+                _now(),
+                reference_answer,
+                feedback,
+                model_name,
+                detail_json,
+            ),
         )
     return {"id": aid, "question_id": question_id}
+
+
+def list_quiz_history(user_id: str = "default", limit: int = 50) -> list[dict]:
+    with _conn() as c:
+        rows = c.execute(
+            """SELECT * FROM user_answers WHERE user_id = ?
+               ORDER BY created_at DESC LIMIT ?""",
+            (user_id, limit),
+        ).fetchall()
+    out = []
+    for r in rows:
+        d = dict(r)
+        if d.get("comparison_detail"):
+            try:
+                d["comparison_detail"] = json.loads(d["comparison_detail"])
+            except Exception:
+                pass
+        out.append(d)
+    return out
+
+
+def get_question_attempt_scores(user_id: str, question_id: str) -> list[dict]:
+    with _conn() as c:
+        rows = c.execute(
+            """SELECT id, ai_score, self_score, created_at, feedback
+               FROM user_answers WHERE user_id = ? AND question_id = ?
+               ORDER BY created_at ASC""",
+            (user_id, question_id),
+        ).fetchall()
+    return [
+        {
+            "id": r["id"],
+            "score": r["ai_score"] if r["ai_score"] is not None else r["self_score"],
+            "created_at": r["created_at"],
+            "feedback": r["feedback"],
+        }
+        for r in rows
+    ]
+
+
+# --- User settings ---
+
+
+def get_user_settings(user_id: str = "default") -> dict:
+    with _conn() as c:
+        r = c.execute("SELECT * FROM user_settings WHERE user_id = ?", (user_id,)).fetchone()
+    if not r:
+        return {"user_id": user_id}
+    return dict(r)
+
+
+def upsert_user_settings(user_id: str, payload: dict) -> None:
+    row = get_user_settings(user_id)
+    base_url = payload["llm_base_url"] if "llm_base_url" in payload else row.get("llm_base_url")
+    model = payload["llm_model"] if "llm_model" in payload else row.get("llm_model")
+    force_demo = int(
+        payload["force_demo"] if "force_demo" in payload else (row.get("force_demo") or 0)
+    )
+    api_key = row.get("llm_api_key")
+    if payload.get("llm_api_key"):
+        api_key = payload["llm_api_key"]
+    now = _now()
+    with _conn() as c:
+        c.execute(
+            """INSERT INTO user_settings (user_id, llm_base_url, llm_api_key, llm_model, force_demo, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?)
+               ON CONFLICT(user_id) DO UPDATE SET
+                 llm_base_url = excluded.llm_base_url,
+                 llm_api_key = excluded.llm_api_key,
+                 llm_model = excluded.llm_model,
+                 force_demo = excluded.force_demo,
+                 updated_at = excluded.updated_at""",
+            (user_id, base_url, api_key, model, force_demo, now),
+        )
+
+
+# --- Reference answers (persistent memory per question) ---
+
+
+def get_reference_answer(user_id: str, question_id: str) -> dict | None:
+    with _conn() as c:
+        r = c.execute(
+            "SELECT * FROM user_reference_answers WHERE user_id = ? AND question_id = ?",
+            (user_id, question_id),
+        ).fetchone()
+    return dict(r) if r else None
+
+
+def upsert_reference_answer(user_id: str, question_id: str, reference_text: str) -> dict:
+    now = _now()
+    with _conn() as c:
+        c.execute(
+            """INSERT INTO user_reference_answers (user_id, question_id, reference_text, updated_at)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(user_id, question_id) DO UPDATE SET
+                 reference_text = excluded.reference_text,
+                 updated_at = excluded.updated_at""",
+            (user_id, question_id, reference_text, now),
+        )
+    return get_reference_answer(user_id, question_id) or {}
 
 
 def get_wrong_book(user_id: str = "default", max_score: int = 60) -> list[dict]:

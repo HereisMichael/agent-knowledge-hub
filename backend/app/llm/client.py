@@ -4,19 +4,31 @@ from typing import Any
 from openai import OpenAI
 
 from app.config import settings
+from app.settings.service import LlmRuntime
 
 
-def get_client() -> OpenAI:
-    return OpenAI(
-        base_url=settings.llm_base_url,
-        api_key=settings.llm_api_key or "not-set",
-    )
+def get_client(runtime: LlmRuntime | None = None) -> OpenAI:
+    rt = runtime
+    if rt is None:
+        from app.settings.service import resolve_llm
+
+        rt = resolve_llm()
+    return OpenAI(base_url=rt.base_url, api_key=rt.api_key or "not-set")
 
 
-def chat_json(system: str, user: str, schema_hint: str | None = None) -> dict[str, Any]:
-    if settings.use_demo_llm:
-        return {"answer": "（Demo 模式）请配置 LLM_API_KEY 以启用完整 AI 能力。", "citations": []}
-    client = get_client()
+def chat_json(
+    system: str,
+    user: str,
+    schema_hint: str | None = None,
+    *,
+    runtime: LlmRuntime | None = None,
+) -> dict[str, Any]:
+    from app.settings.service import resolve_llm
+
+    rt = runtime or resolve_llm()
+    if rt.demo:
+        return {}
+    client = get_client(rt)
     messages = [
         {"role": "system", "content": system},
         {
@@ -25,7 +37,7 @@ def chat_json(system: str, user: str, schema_hint: str | None = None) -> dict[st
         },
     ]
     resp = client.chat.completions.create(
-        model=settings.llm_model,
+        model=rt.model,
         messages=messages,
         temperature=0.2,
         response_format={"type": "json_object"},
@@ -34,12 +46,15 @@ def chat_json(system: str, user: str, schema_hint: str | None = None) -> dict[st
     return json.loads(text)
 
 
-def chat_text(system: str, user: str) -> str:
-    if settings.use_demo_llm:
-        return "（Demo 模式）已收到你的消息。配置 LLM_API_KEY 后可获得完整模拟面试与 AI 评分。"
-    client = get_client()
+def chat_text(system: str, user: str, *, runtime: LlmRuntime | None = None) -> str:
+    from app.settings.service import resolve_llm
+
+    rt = runtime or resolve_llm()
+    if rt.demo:
+        return "（Demo 模式）已收到你的消息。请在「设置」中配置模型 API Key。"
+    client = get_client(rt)
     resp = client.chat.completions.create(
-        model=settings.llm_model,
+        model=rt.model,
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user},

@@ -37,6 +37,8 @@ export async function quizNext(vendor?: string, category?: string) {
 export async function quizSubmit(body: {
   question_id: string;
   answer_text: string;
+  reference_answer?: string;
+  save_reference?: boolean;
   self_score?: number;
   use_ai?: boolean;
 }) {
@@ -50,6 +52,54 @@ export async function quizSubmit(body: {
 
 export async function quizStats() {
   const r = await fetch(`${API}/api/quiz/stats`);
+  return r.json();
+}
+
+export async function quizGetReference(questionId: string) {
+  const r = await fetch(`${API}/api/quiz/questions/${questionId}/reference`);
+  return r.json();
+}
+
+export async function quizPutReference(questionId: string, referenceText: string) {
+  const r = await fetch(`${API}/api/quiz/questions/${questionId}/reference`, {
+    method: "PUT",
+    headers: headers(),
+    body: JSON.stringify({ reference_text: referenceText }),
+  });
+  return r.json();
+}
+
+export async function quizAnalytics() {
+  const r = await fetch(`${API}/api/quiz/analytics`);
+  return r.json();
+}
+
+export async function quizHistory(limit = 30) {
+  const r = await fetch(`${API}/api/quiz/history?limit=${limit}`);
+  return r.json();
+}
+
+export async function getSettings() {
+  const r = await fetch(`${API}/api/settings`);
+  return r.json();
+}
+
+export async function updateSettings(body: {
+  llm_base_url?: string;
+  llm_model?: string;
+  llm_api_key?: string;
+  force_demo?: boolean;
+}) {
+  const r = await fetch(`${API}/api/settings`, {
+    method: "PUT",
+    headers: headers(),
+    body: JSON.stringify(body),
+  });
+  return r.json();
+}
+
+export async function testSettings() {
+  const r = await fetch(`${API}/api/settings/test`, { method: "POST", headers: headers() });
   return r.json();
 }
 

@@ -6,8 +6,9 @@ import { LearnPage } from "./pages/Learn";
 import { MockPage } from "./pages/Mock";
 import { ProgressPage } from "./pages/Progress";
 import { QuizPage } from "./pages/Quiz";
+import { SettingsPage } from "./pages/Settings";
 
-type Tab = "learn" | "quiz" | "mock" | "labs" | "progress" | "review";
+type Tab = "learn" | "quiz" | "mock" | "labs" | "progress" | "settings" | "review";
 
 const TABS: { id: Tab; label: string; title: string }[] = [
   { id: "learn", label: "学习", title: "知识问答" },
@@ -15,6 +16,7 @@ const TABS: { id: Tab; label: string; title: string }[] = [
   { id: "mock", label: "模拟面试", title: "模拟面试" },
   { id: "labs", label: "实操 Lab", title: "实操 Lab" },
   { id: "progress", label: "进度", title: "学习进度" },
+  { id: "settings", label: "设置", title: "模型设置" },
   { id: "review", label: "内容审核", title: "内容审核" },
 ];
 
@@ -80,12 +82,13 @@ export default function App() {
         </header>
 
         <div className="content">
-          {tab === "learn" && <LearnPage />}
-          {tab === "quiz" && <QuizPage />}
-          {tab === "mock" && <MockPage />}
-          {tab === "labs" && <LabsPage />}
-          {tab === "progress" && <ProgressPage />}
-          {tab === "review" && <ContentReviewPage />}
+          <div style={{ display: tab === "learn" ? "block" : "none" }}><LearnPage /></div>
+          <div style={{ display: tab === "quiz" ? "block" : "none" }}><QuizPage /></div>
+          <div style={{ display: tab === "mock" ? "block" : "none" }}><MockPage /></div>
+          <div style={{ display: tab === "labs" ? "block" : "none" }}><LabsPage /></div>
+          <div style={{ display: tab === "progress" ? "block" : "none" }}><ProgressPage /></div>
+          <div style={{ display: tab === "settings" ? "block" : "none" }}><SettingsPage /></div>
+          <div style={{ display: tab === "review" ? "block" : "none" }}><ContentReviewPage /></div>
         </div>
       </div>
     </div>

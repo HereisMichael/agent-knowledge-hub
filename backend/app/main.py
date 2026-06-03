@@ -11,7 +11,9 @@ from app.content.rollback import list_publish_logs, rollback_publish
 from app.db import store
 from app.interview import mock as mock_svc
 from app.interview import review as review_svc
-from app.interview.quiz import build_explanation, next_question, score_answer_ai
+from app.interview.analytics import build_quiz_analytics
+from app.interview.quiz import build_explanation, next_question, submit_answer
+from app.settings import service as settings_svc
 from app.interview.questions import get_question, load_questions, questions_by_vendor
 from app.progress.radar import build_radar
 from app.reports.pdf import build_mock_report_pdf
@@ -66,9 +68,24 @@ class SearchBody(BaseModel):
 class QuizSubmitBody(BaseModel):
     question_id: str
     answer_text: str
+    reference_answer: str = ""
+    save_reference: bool = False
     self_score: int | None = None
     user_id: str = "default"
     use_ai: bool = True
+
+
+class SettingsBody(BaseModel):
+    llm_base_url: str | None = None
+    llm_api_key: str | None = None
+    llm_model: str | None = None
+    force_demo: bool = False
+    user_id: str = "default"
+
+
+class ReferenceAnswerBody(BaseModel):
+    reference_text: str
+    user_id: str = "default"
 
 
 class MockCreateBody(BaseModel):
@@ -104,10 +121,11 @@ class IngestBody(BaseModel):
 
 @app.get("/api/health")
 def health():
+    rt = settings_svc.resolve_llm()
     return {
         "status": "ok",
-        "model": settings.llm_model,
-        "demo_mode": settings.use_demo_llm,
+        "model": rt.model,
+        "demo_mode": rt.demo,
         "questions": len(load_questions()),
         "sources": len(list_source_ids()),
     }
@@ -164,34 +182,101 @@ def quiz_next(
     vendor: str | None = None,
     category: str | None = None,
     difficulty: int | None = None,
+    user_id: str = "default",
 ):
     result = next_question(vendor=vendor, category=category, difficulty=difficulty)
     if not result:
         raise HTTPException(404, "no matching question")
+    qid = result["question"]["id"]
+    ref = store.get_reference_answer(user_id, qid)
+    if ref:
+        result["saved_reference"] = ref.get("reference_text", "")
+    history = store.get_question_attempt_scores(user_id, qid)
+    if history:
+        result["score_history"] = history
     return result
 
 
 @app.post("/api/quiz/submit")
 def quiz_submit(body: QuizSubmitBody):
-    q = get_question(body.question_id)
-    if not q:
+    try:
+        return submit_answer(
+            body.user_id,
+            body.question_id,
+            body.answer_text,
+            reference_answer=body.reference_answer or None,
+            save_reference=body.save_reference,
+            use_ai=body.use_ai,
+            self_score=body.self_score,
+        )
+    except KeyError:
         raise HTTPException(404, "question not found")
-    ai_result = score_answer_ai(q, body.answer_text) if body.use_ai else {}
-    store.save_quiz_answer(
-        body.user_id,
-        body.question_id,
-        body.answer_text,
-        body.self_score,
-        ai_result.get("ai_score"),
-    )
-    score = ai_result.get("ai_score") or body.self_score
-    review_card = review_svc.schedule_after_quiz(body.user_id, body.question_id, score)
-    return {
-        "question": q,
-        "explanation": build_explanation(q),
-        "review_scheduled": review_card is not None,
-        **ai_result,
-    }
+
+
+@app.get("/api/quiz/questions/{question_id}/reference")
+def quiz_get_reference(question_id: str, user_id: str = "default"):
+    ref = store.get_reference_answer(user_id, question_id)
+    return {"reference": ref}
+
+
+@app.put("/api/quiz/questions/{question_id}/reference")
+def quiz_put_reference(question_id: str, body: ReferenceAnswerBody):
+    if not get_question(question_id):
+        raise HTTPException(404, "question not found")
+    ref = store.upsert_reference_answer(body.user_id, question_id, body.reference_text)
+    return {"reference": ref}
+
+
+@app.get("/api/quiz/history")
+def quiz_history(user_id: str = "default", limit: int = 50):
+    items = store.list_quiz_history(user_id, limit=limit)
+    enriched = []
+    for row in items:
+        q = get_question(row["question_id"])
+        enriched.append({**row, "question_meta": q})
+    return {"items": enriched}
+
+
+@app.get("/api/quiz/analytics")
+def quiz_analytics(user_id: str = "default"):
+    return build_quiz_analytics(user_id)
+
+
+@app.get("/api/settings")
+def api_get_settings(user_id: str = "default"):
+    return settings_svc.get_settings_public(user_id)
+
+
+@app.put("/api/settings")
+def api_put_settings(body: SettingsBody):
+    payload = {}
+    if body.llm_base_url is not None:
+        payload["llm_base_url"] = body.llm_base_url
+    if body.llm_model is not None:
+        payload["llm_model"] = body.llm_model
+    if body.llm_api_key:
+        payload["llm_api_key"] = body.llm_api_key
+    payload["force_demo"] = int(body.force_demo)
+    return settings_svc.update_settings(body.user_id, payload)
+
+
+@app.post("/api/settings/test")
+def api_test_settings(user_id: str = "default"):
+    from app.llm.client import chat_text
+    from app.settings.service import resolve_llm
+
+    rt = resolve_llm(user_id)
+    if rt.demo:
+        return {"ok": False, "message": "当前为 Demo 模式，请配置 API Key 或关闭强制 Demo"}
+    try:
+        reply = chat_text(
+            "你是助手。",
+            "回复 JSON 字符串 {\"status\":\"ok\"}",
+            runtime=rt,
+        )
+        return {"ok": True, "message": "连接成功", "model": rt.model, "preview": reply[:200]}
+    except Exception as e:
+        return {"ok": False, "message": str(e)}
 
 
 @app.get("/api/quiz/wrong-book")

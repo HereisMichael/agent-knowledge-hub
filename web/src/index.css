@@ -940,3 +940,109 @@ textarea {
   background: transparent;
   border: 1px solid var(--accent);
 }
+
+/* Settings */
+.settings-panel input[type="text"],
+.settings-panel input[type="password"] {
+  width: 100%;
+  max-width: 28rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+}
+
+.field-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.settings-msg {
+  margin-top: 0.75rem;
+  color: var(--success);
+  font-size: 0.875rem;
+}
+
+.score-mini-chart {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.score-chip {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Data tables */
+.table-wrap {
+  overflow-x: auto;
+  margin-top: 0.5rem;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.data-table tbody tr:hover {
+  background: var(--surface-raised);
+}
+
+.cell-question {
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-good {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.score-low {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.trend-up {
+  color: var(--success);
+}
+
+.trend-down {
+  color: var(--danger);
+}
+
+.trend-stable,
+.trend-new {
+  color: var(--text-muted);
+}
