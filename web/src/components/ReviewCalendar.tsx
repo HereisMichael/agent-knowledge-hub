@@ -24,9 +24,13 @@ export function ReviewCalendar() {
     total_cards: number;
     days: Record<string, DaySlot>;
   } | null>(null);
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
-    quizReviewCalendar(year, month).then(setData).catch(() => setData(null));
+    setState("loading");
+    quizReviewCalendar(year, month)
+      .then((next) => { setData(next); setState("ready"); })
+      .catch(() => { setData(null); setState("error"); });
   }, [year, month]);
 
   function prevMonth() {
@@ -64,6 +68,9 @@ export function ReviewCalendar() {
           ›
         </button>
       </div>
+
+      {state === "loading" && <p className="empty-hint" role="status">正在加载复习日历…</p>}
+      {state === "error" && <p className="inline-message" data-tone="danger" role="alert">复习日历加载失败</p>}
 
       {data && (
         <p className="review-calendar-summary">

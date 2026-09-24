@@ -1,15 +1,54 @@
-backend/data/
-backend/.env
-web/node_modules/
-web/dist/
-__pycache__/
-*.pyc
-.venv/
-.pytest_cache/
+.worktrees/
+.superpowers/
 content/staging/
-content/published/
-content/.extra_diff_state.json
-*.log
+content/published/llm101/
+!content/published/llm101/
+content/published/llm101/*
+!content/published/llm101/answers.jsonl
+content/published/backups/
+knowledge/llm101/
+!knowledge/llm101/
+knowledge/llm101/*
+!knowledge/llm101/exercises/
+!knowledge/llm101/pages/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.pytest-basetemp/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+npm-debug.log*
+
+# Runtime data
+backend/data/
+privacy-ledger/
+data/
+eval/eval-report.json
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated retrieval state
+**/chroma/
+**/chroma_*/
+**/ingest_manifest.json
+
+# OS and editor
 .DS_Store
-docs/.maintainer-local.md
-docs/PROJECT_STATE.md
+Thumbs.db
+.idea/
+.vscode/

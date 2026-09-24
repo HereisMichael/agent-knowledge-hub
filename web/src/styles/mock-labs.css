@@ -1,0 +1,28 @@
+.mock-chat-log { display: grid; gap: var(--space-3); max-height: 32rem; overflow-y: auto; padding-right: var(--space-2); }
+.mock-message { max-width: 86%; padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-sm); background: rgb(7 20 27 / 55%); }
+.mock-message[data-role="candidate"] { justify-self: end; border-color: rgb(103 199 241 / 38%); background: var(--color-signal-soft); }
+.mock-message > span { color: var(--color-signal); font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase; }
+.mock-message p { margin: var(--space-2) 0 0; white-space: pre-wrap; }
+.mock-composer { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--border); }
+.mock-timer { display: grid; grid-template-columns: 1fr auto; gap: var(--space-1) var(--space-3); margin-top: var(--space-4); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-xs); }
+.mock-timer span, .mock-timer small { color: var(--text-muted); }
+.mock-timer strong { grid-row: span 2; align-self: center; color: var(--color-signal); font-family: var(--mono); font-size: 1.5rem; }
+.mock-timer[data-urgent="true"] strong { color: var(--color-thermal); }
+.mock-timer-track { height: 0.3rem; margin-top: var(--space-2); overflow: hidden; border-radius: var(--radius-pill); background: rgb(129 149 157 / 17%); }
+.mock-timer-track span { display: block; height: 100%; background: var(--color-signal); }
+.mock-finish { width: 100%; justify-content: center; }
+.lab-catalog { display: grid; gap: var(--space-4); }
+.training-lab-card { padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-xs); background: rgb(7 20 27 / 42%); }
+.training-lab-card header { display: flex; justify-content: space-between; gap: var(--space-4); align-items: start; }
+.training-lab-card h3, .recommended-lab h3 { margin: 0; font-size: 1rem; }
+.training-lab-card header > span { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--text-muted); font-size: 0.75rem; white-space: nowrap; }
+.training-lab-card ol { margin: var(--space-4) 0; padding-left: 1.25rem; color: var(--text-muted); }
+.recommended-labs { display: grid; gap: var(--space-3); }
+.recommended-lab { padding: var(--space-3); border-left: 2px solid var(--color-thermal); background: rgb(245 182 93 / 7%); }
+.recommended-lab p { margin: var(--space-2) 0; color: var(--text-muted); font-size: 0.78rem; }
+.recommended-lab span { display: inline-block; margin: 0 var(--space-1) var(--space-1) 0; padding: var(--space-1) var(--space-2); border-radius: var(--radius-pill); background: rgb(245 182 93 / 10%); color: var(--color-thermal); font-size: 0.68rem; }
+
+@media (max-width: 620px) {
+  .mock-message { max-width: 96%; }
+  .training-lab-card header { flex-direction: column; }
+}

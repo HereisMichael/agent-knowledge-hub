@@ -1,0 +1,109 @@
+{
+  "commit": "e139bb64be3d8cdbb409c8282ea0b81747084bc9",
+  "files": [
+    {
+      "path": "docs/exercises/agent-rl-fill.md",
+      "sha256": "1dc80001567822e64093669e6528b0e4db12076a4ed8680c105bf1d95a7b947e"
+    },
+    {
+      "path": "docs/exercises/attention-fill.md",
+      "sha256": "62adc10b4525126d4ad2ef457123bea3348740bf4808e2e1165b08768a4a5347"
+    },
+    {
+      "path": "docs/exercises/common-fill.md",
+      "sha256": "a1174390834f0f7596b7f60df97c75bfeb6ff82acef6217de8b4126984e06bc2"
+    },
+    {
+      "path": "docs/exercises/deepseek-arch-fill.md",
+      "sha256": "56b88b9674b29ff302301efa0236008f75ed586bba3a9013d02e9eaa756c4677"
+    },
+    {
+      "path": "docs/exercises/distributed-fill.md",
+      "sha256": "13750e15382f7784d8dbc045701f96c777b2894c60dc0a014889c8d0a466738e"
+    },
+    {
+      "path": "docs/exercises/dpo-grpo-fill.md",
+      "sha256": "f0eb638db97a8f0c51a8b4f8689f85eff1c565a56c29bcd5b08a44c7163c5faa"
+    },
+    {
+      "path": "docs/exercises/flash-attn-fill.md",
+      "sha256": "02ac5581f8e3b7fe60e2144375c09e382e5a850e0d25c72e9a0ae10840f182a6"
+    },
+    {
+      "path": "docs/exercises/gpt-build.md",
+      "sha256": "7c8c751435ac8112202f282171deee88f906e496f3be66114cd0f0dbe9acbec0"
+    },
+    {
+      "path": "docs/exercises/inference-fill.md",
+      "sha256": "77dd6b4e026306c9c77c00d59e1e659e6918f0e231a52338e89ef81844673f8d"
+    },
+    {
+      "path": "docs/exercises/llama-build.md",
+      "sha256": "f36be09f3cedcf0de8a5770a90006739cfcee8c0d9b0b0210838ed2141e4e387"
+    },
+    {
+      "path": "docs/exercises/lora-fill.md",
+      "sha256": "19ef5e1f9f623720216988be9ee0dc3e4aa1ce494e8213d4210ef22a79156f64"
+    },
+    {
+      "path": "docs/exercises/moe-build.md",
+      "sha256": "6c265347bdb0db11efcb14eb17f4fdf32335d088c01ef289240bb12611de0a35"
+    },
+    {
+      "path": "docs/exercises/moe-fill.md",
+      "sha256": "80911a02569cc2cd437e73fb9ecdaf131451c60a0dd70cdb79e571dfa43ed9dd"
+    },
+    {
+      "path": "docs/exercises/multimodal-fill.md",
+      "sha256": "645ea941f4fd0bf671f708104d3b8d32cc41594bc7c91dd28a7b250b863655ca"
+    },
+    {
+      "path": "docs/exercises/ppo-fill.md",
+      "sha256": "68e365c7b7754ade7f6e0cb69089c1af5dc29eb4ef25ef8cc277490b529e4d13"
+    },
+    {
+      "path": "docs/exercises/pretraining-fill.md",
+      "sha256": "b4ac984cd975bb0613c91bac2cb42dfcba6384d07b38154e3218acf161eeeefe"
+    },
+    {
+      "path": "docs/exercises/prompt-eval-fill.md",
+      "sha256": "b1b55fa780944179116537262ec103a00a52d67b2d2dd40f90e1c1b369afb1e2"
+    },
+    {
+      "path": "docs/exercises/quantization-fill.md",
+      "sha256": "6892474eec66df9bafd6fdcaaa67224f8b4a92f6e1070f60a0bd09710053b665"
+    },
+    {
+      "path": "docs/exercises/rag-agent-fill.md",
+      "sha256": "cc534f4a180893fc1df0468898baa4b3c26076826c01494b6b7313f55eb1611b"
+    },
+    {
+      "path": "docs/exercises/rag-build.md",
+      "sha256": "581e8fc541f990fa3c4c6f1c85b91b16c4ca2a23d0b27c2a36e427b819690d25"
+    },
+    {
+      "path": "docs/exercises/rlhf-build.md",
+      "sha256": "9a3933c11866682fc13b507dcd6615d0fae08588b2fed370b73b0cea43c4d5c9"
+    },
+    {
+      "path": "docs/exercises/scaling-laws-fill.md",
+      "sha256": "8423756c237ec722f653f6f07d4b8790e44914a5aa717f33021a3185e959ed1b"
+    },
+    {
+      "path": "docs/exercises/sft-training-fill.md",
+      "sha256": "7294cab150c0fa77e91f3d0141b56e7d6ac69bcddcbca3eff34f6b760ea2a1de"
+    },
+    {
+      "path": "docs/exercises/tokenization-fill.md",
+      "sha256": "98f03820fdc82d6fa03182ed2c22c10365d58b674720090331cc067c9947d2be"
+    },
+    {
+      "path": "docs/exercises/transformer-quiz.md",
+      "sha256": "0714b98e4febaaf52ede0c7e4a670e2c9eba07cab1af022f9c86815e14129d13"
+    }
+  ],
+  "rights_status": "unverified",
+  "schema_version": 1,
+  "source": "llm101",
+  "source_url": "https://github.com/boots-coder/LLM-101-CN"
+}

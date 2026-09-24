@@ -1,0 +1,33 @@
+.insight-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); margin-bottom: var(--space-4); }
+.weekly-signal { margin-bottom: var(--space-4); border-left: 3px solid var(--color-signal); }
+.weekly-signal p { max-width: 68ch; margin: 0; font-family: var(--font-display); font-size: 1.05rem; line-height: 1.55; }
+.insights-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); align-items: start; }
+.insight-history, .insight-radar { grid-column: 1 / -1; }
+.insight-summary { margin: 0 0 var(--space-4); color: var(--text-muted); font-size: 0.82rem; }
+.radar-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.radar-cell { min-width: 0; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-xs); }
+.radar-cell h3 { margin: 0 0 var(--space-3); font-size: 0.88rem; }
+.radar-cell .radar-chart { display: block; max-width: 100%; height: auto; margin: auto; }
+.radar-text-summary { list-style: none; margin: var(--space-3) 0 0; padding: 0; }
+.radar-text-summary li { display: grid; grid-template-columns: 1fr auto; gap: var(--space-1) var(--space-3); padding: var(--space-2) 0; border-top: 1px solid var(--border); font-size: 0.76rem; }
+.radar-text-summary strong { color: var(--color-signal); font-family: var(--mono); }
+.radar-text-summary small { grid-column: 1 / -1; color: var(--text-muted); }
+.vendor-list { list-style: none; margin: 0; padding: 0; }
+.vendor-list li { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--border); }
+.vendor-list strong { color: var(--color-signal); font-family: var(--mono); }
+.assessment-workspace > :first-child { margin-top: 0; }
+.assessment-context-list { list-style: none; margin: 0; padding: 0; }
+.assessment-context-list li { display: grid; gap: var(--space-1); padding: var(--space-3) 0; border-bottom: 1px solid var(--border); }
+.assessment-context-list strong { font-size: 0.82rem; }
+.assessment-context-list span { color: var(--text-muted); font-size: 0.74rem; }
+
+@media (max-width: 1199px) {
+  .insight-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .insights-grid { grid-template-columns: 1fr; }
+  .insight-history, .insight-radar { grid-column: auto; }
+}
+
+@media (max-width: 680px) {
+  .insight-metrics, .insights-grid, .radar-grid { grid-template-columns: 1fr; }
+  .insight-history, .insight-radar { grid-column: auto; }
+}

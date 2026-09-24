@@ -1,0 +1,6 @@
+{"id":"llm101-transformer-quiz-01","domain":"transformer-choice","expected_status":"graded","expected_score":100}
+{"id":"llm101-attention-fill-01","domain":"attention-softmax-blank","expected_status":"recorded","expected_score":null}
+{"id":"llm101-rag-agent-fill-03","domain":"rag-agent-blank","expected_status":"recorded","expected_score":null}
+{"id":"llm101-lora-fill-03","domain":"sft-lora-blank","expected_status":"recorded","expected_score":null}
+{"id":"llm101-distributed-fill-03","domain":"distributed-inference-blank","expected_status":"recorded","expected_score":null}
+{"id":"llm101-gpt-build-01","domain":"level-four-build","expected_status":"recorded","expected_score":null}

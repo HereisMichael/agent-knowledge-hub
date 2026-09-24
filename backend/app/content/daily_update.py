@@ -2,15 +2,38 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import yaml
 
 from app.config import settings
-from app.content.audit import ai_audit_report, audit_markdown, audit_question
+from app.content.audit import ai_audit_report, audit_exercise_package, audit_markdown, audit_question
 from app.content.extra_diff import scan_extra_dirs
 from app.content.publish import publish_item
 from app.db import store
+
+
+def register_llm101_package(staging: Path) -> dict | None:
+    """Register an imported source commit once; manual admin approval is required."""
+    catalog_path = staging / "catalog.json"
+    manifest_path = staging / "source-manifest.json"
+    if not catalog_path.is_file() or not manifest_path.is_file():
+        return None
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    title = f"LLM-101-CN exercises @ {str(manifest.get('commit', 'unknown'))[:12]}"
+    path = str(catalog_path.resolve())
+    if any(item["source_path"] == path and item["title"] == title for item in store.list_content_items()):
+        return None
+    checks = audit_exercise_package(staging)
+    item = store.create_content_item("exercise", path, title)
+    return store.update_content_item(
+        item["id"],
+        audit_checks=checks,
+        audit_report={"recommendation": "review", "summary": "LLM101 package requires manual rights and content review"},
+        quality_score=80 if checks["passed"] else 0,
+        status="pending_audit",
+    )
 
 
 def _maybe_auto_publish(item: dict, score: float, checks: dict) -> bool:
@@ -36,6 +59,8 @@ def run_daily_update() -> dict:
     staging.mkdir(parents=True, exist_ok=True)
 
     extra_result = scan_extra_dirs()
+    if register_llm101_package(staging / "llm101") is not None:
+        created += 1
 
     for sub in ("tech", "interview"):
         folder = staging / sub

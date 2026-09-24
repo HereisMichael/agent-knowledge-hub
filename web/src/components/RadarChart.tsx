@@ -54,6 +54,8 @@ export function RadarChart({
       role="img"
       aria-label="进度雷达图"
     >
+      <title>能力雷达图</title>
+      <desc>{axes.map((axis) => `${label(axis.axis)} ${axis.value}`).join("，")}</desc>
       {gridLevels.map((lv) => (
         <polygon
           key={lv}

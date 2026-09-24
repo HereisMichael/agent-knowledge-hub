@@ -11,6 +11,7 @@ import yaml
 from chromadb.config import Settings as ChromaSettings
 
 from app.config import settings
+from app.rag.knowledge_roots import resolve_knowledge_roots
 
 FRONT_MATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 COLLECTION_NAME = "agent_kb"
@@ -39,12 +40,6 @@ def chunk_text(body: str, chunk_size: int = 600) -> list[str]:
     if buf:
         chunks.append(buf)
     return chunks or [body[:chunk_size]]
-
-
-def _knowledge_roots() -> list[Path]:
-    roots = [settings.knowledge_dir]
-    roots.extend(settings.extra_knowledge_dirs)
-    return roots
 
 
 def _manifest_path() -> Path:
@@ -111,7 +106,7 @@ def ingest_knowledge(knowledge_dirs: list[Path] | None = None, *, full: bool = F
 
 
 def _ingest_full(knowledge_dirs: list[Path] | None = None) -> dict:
-    roots = knowledge_dirs or _knowledge_roots()
+    roots = resolve_knowledge_roots(knowledge_dirs)
     client = chromadb.PersistentClient(
         path=settings.chroma_path,
         settings=ChromaSettings(anonymized_telemetry=False),
@@ -154,7 +149,7 @@ def _ingest_full(knowledge_dirs: list[Path] | None = None) -> dict:
 
 
 def ingest_knowledge_incremental(knowledge_dirs: list[Path] | None = None) -> dict:
-    roots = knowledge_dirs or _knowledge_roots()
+    roots = resolve_knowledge_roots(knowledge_dirs)
     client = chromadb.PersistentClient(
         path=settings.chroma_path,
         settings=ChromaSettings(anonymized_telemetry=False),

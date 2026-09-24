@@ -20,6 +20,7 @@ const TREND_LABEL: Record<string, string> = {
 };
 
 const VENDOR: Record<string, string> = {
+  general: "通用 / AI Infra",
   aliyun: "阿里云",
   tencent: "腾讯云",
   aws: "AWS",
@@ -63,7 +64,7 @@ export function ScoreHistoryTable({ rows }: { rows: Row[] }) {
               <td>
                 <span className={`trend trend-${r.trend}`}>{TREND_LABEL[r.trend] ?? r.trend}</span>
               </td>
-              <td>{r.has_reference ? "已保存" : "—"}</td>
+              <td>{r.has_reference ? "已保存" : "-"}</td>
             </tr>
           ))}
         </tbody>
