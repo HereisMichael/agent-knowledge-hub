@@ -1,0 +1,520 @@
+{
+  "schema_version": 1,
+  "sets": [
+    {
+      "description": "Level 2-3 填空：格式奖励、可验证奖励、多轮轨迹 Mask、异步 Rollout、Composite Reward、Trajectory→Token 分配",
+      "id": "llm101-agent-rl-fill",
+      "item_ids": [
+        "llm101-agent-rl-fill-01",
+        "llm101-agent-rl-fill-02",
+        "llm101-agent-rl-fill-03",
+        "llm101-agent-rl-fill-04",
+        "llm101-agent-rl-fill-05",
+        "llm101-agent-rl-fill-06"
+      ],
+      "source_path": "docs/exercises/agent-rl-fill.md",
+      "title": "Agent-RL 代码填空",
+      "topics": [
+        "fill-in",
+        "agent-rl",
+        "GRPO",
+        "reward-design",
+        "rule-based-reward",
+        "async-rollout",
+        "multi-turn",
+        "RLVR",
+        "RLVE",
+        "trajectory-mask"
+      ]
+    },
+    {
+      "description": "Level 2 填空：Scaled Dot-Product Attention 和 Multi-Head Attention 实现",
+      "id": "llm101-attention-fill",
+      "item_ids": [
+        "llm101-attention-fill-01",
+        "llm101-attention-fill-02",
+        "llm101-attention-fill-03"
+      ],
+      "source_path": "docs/exercises/attention-fill.md",
+      "title": "Attention 代码填空",
+      "topics": [
+        "fill-in",
+        "attention",
+        "scaled-dot-product",
+        "multi-head"
+      ]
+    },
+    {
+      "description": "Level 2-3 填空：Softmax、Cross Entropy、AdamW、LayerNorm、BPE",
+      "id": "llm101-common-fill",
+      "item_ids": [
+        "llm101-common-fill-01",
+        "llm101-common-fill-02",
+        "llm101-common-fill-03",
+        "llm101-common-fill-04",
+        "llm101-common-fill-05"
+      ],
+      "source_path": "docs/exercises/common-fill.md",
+      "title": "基础组件实现",
+      "topics": [
+        "fill-in",
+        "softmax",
+        "cross-entropy",
+        "AdamW",
+        "LayerNorm",
+        "BPE"
+      ]
+    },
+    {
+      "description": "Level 2-3 填空：MLA 低秩注意力、DeepSeekMoE 路由、辅助损失 Free",
+      "id": "llm101-deepseek-arch-fill",
+      "item_ids": [
+        "llm101-deepseek-arch-fill-01",
+        "llm101-deepseek-arch-fill-02",
+        "llm101-deepseek-arch-fill-03",
+        "llm101-deepseek-arch-fill-04",
+        "llm101-deepseek-arch-fill-05"
+      ],
+      "source_path": "docs/exercises/deepseek-arch-fill.md",
+      "title": "DeepSeek 架构填空",
+      "topics": [
+        "fill-in",
+        "DeepSeek",
+        "MLA",
+        "multi-latent-attention",
+        "DeepSeekMoE",
+        "auxiliary-loss-free"
+      ]
+    },
+    {
+      "description": "Level 2-3 填空：AllReduce、DDP、Tensor Parallelism、Pipeline Parallelism",
+      "id": "llm101-distributed-fill",
+      "item_ids": [
+        "llm101-distributed-fill-01",
+        "llm101-distributed-fill-02",
+        "llm101-distributed-fill-03",
+        "llm101-distributed-fill-04",
+        "llm101-distributed-fill-05"
+      ],
+      "source_path": "docs/exercises/distributed-fill.md",
+      "title": "分布式训练填空",
+      "topics": [
+        "fill-in",
+        "distributed",
+        "DDP",
+        "tensor-parallelism",
+        "pipeline-parallelism",
+        "allreduce"
+      ]
+    },
+    {
+      "description": "Level 2-3 填空：Bradley-Terry、DPO Loss、GRPO 优势函数",
+      "id": "llm101-dpo-grpo-fill",
+      "item_ids": [
+        "llm101-dpo-grpo-fill-01",
+        "llm101-dpo-grpo-fill-02",
+        "llm101-dpo-grpo-fill-03",
+        "llm101-dpo-grpo-fill-04",
+        "llm101-dpo-grpo-fill-05",
+        "llm101-dpo-grpo-fill-06",
+        "llm101-dpo-grpo-fill-07",
+        "llm101-dpo-grpo-fill-08"
+      ],
+      "source_path": "docs/exercises/dpo-grpo-fill.md",
+      "title": "DPO/GRPO 填空",
+      "topics": [
+        "fill-in",
+        "DPO",
+        "GRPO",
+        "Bradley-Terry",
+        "reward-model"
+      ]
+    },
+    {
+      "description": "Level 2-3 填空：在线 Softmax、分块计算、内存优化",
+      "id": "llm101-flash-attn-fill",
+      "item_ids": [
+        "llm101-flash-attn-fill-01",
+        "llm101-flash-attn-fill-02",
+        "llm101-flash-attn-fill-03",
+        "llm101-flash-attn-fill-04",
+        "llm101-flash-attn-fill-05"
+      ],
+      "source_path": "docs/exercises/flash-attn-fill.md",
+      "title": "Flash Attention 填空",
+      "topics": [
+        "fill-in",
+        "flash-attention",
+        "online-softmax",
+        "tiling",
+        "memory-efficient"
+      ]
+    },
+    {
+      "description": "Level 4 完整实现：GELU、因果掩码、Transformer Block、完整 GPT",
+      "id": "llm101-gpt-build",
+      "item_ids": [
+        "llm101-gpt-build-01"
+      ],
+      "source_path": "docs/exercises/gpt-build.md",
+      "title": "GPT 实现挑战",
+      "topics": [
+        "build",
+        "GPT",
+        "GELU",
+        "causal-mask",
+        "transformer-block"
+      ]
+    },
+    {
+      "description": "Level 2-3 填空：KV Cache、PagedAttention、Continuous Batching、投机采样",
+      "id": "llm101-inference-fill",
+      "item_ids": [
+        "llm101-inference-fill-01",
+        "llm101-inference-fill-02",
+        "llm101-inference-fill-03",
+        "llm101-inference-fill-04",
+        "llm101-inference-fill-05"
+      ],
+      "source_path": "docs/exercises/inference-fill.md",
+      "title": "推理优化填空",
+      "topics": [
+        "fill-in",
+        "KV-cache",
+        "PagedAttention",
+        "continuous-batching",
+        "speculative-decoding"
+      ]
+    },
+    {
+      "description": "Level 4 完整实现：RoPE、RMSNorm、GQA、SwiGLU、完整 Llama",
+      "id": "llm101-llama-build",
+      "item_ids": [
+        "llm101-llama-build-01"
+      ],
+      "source_path": "docs/exercises/llama-build.md",
+      "title": "Llama 实现挑战",
+      "topics": [
+        "build",
+        "Llama",
+        "RoPE",
+        "RMSNorm",
+        "GQA",
+        "SwiGLU"
+      ]
+    },
+    {
+      "description": "Level 2-3 填空：LoRA 初始化、权重合并、完整模块、模型注入",
+      "id": "llm101-lora-fill",
+      "item_ids": [
+        "llm101-lora-fill-01",
+        "llm101-lora-fill-02",
+        "llm101-lora-fill-03",
+        "llm101-lora-fill-04"
+      ],
+      "source_path": "docs/exercises/lora-fill.md",
+      "title": "LoRA 代码填空",
+      "topics": [
+        "fill-in",
+        "LoRA",
+        "low-rank-adaptation"
+      ]
+    },
+    {
+      "description": "Level 4 完整实现：Top-K Router、Expert FFN、Load Balance Loss、容量因子、Sparse MoE Transformer",
+      "id": "llm101-moe-build",
+      "item_ids": [
+        "llm101-moe-build-01"
+      ],
+      "source_path": "docs/exercises/moe-build.md",
+      "title": "MoE 实现挑战",
+      "topics": [
+        "build",
+        "MoE",
+        "mixture-of-experts",
+        "top-k-router",
+        "load-balance",
+        "capacity-factor",
+        "expert-parallelism"
+      ]
+    },
+    {
+      "description": "Level 2-3 填空：Expert Router、稀疏前向、负载均衡",
+      "id": "llm101-moe-fill",
+      "item_ids": [
+        "llm101-moe-fill-01",
+        "llm101-moe-fill-02",
+        "llm101-moe-fill-03"
+      ],
+      "source_path": "docs/exercises/moe-fill.md",
+      "title": "MoE 代码填空",
+      "topics": [
+        "fill-in",
+        "MoE",
+        "router",
+        "load-balancing"
+      ]
+    },
+    {
+      "description": "Level 2-3 填空：Patch Embed、CLIP InfoNCE、LLaVA Projector、视频采样、Vision 工具路由",
+      "id": "llm101-multimodal-fill",
+      "item_ids": [
+        "llm101-multimodal-fill-01",
+        "llm101-multimodal-fill-02",
+        "llm101-multimodal-fill-03",
+        "llm101-multimodal-fill-04",
+        "llm101-multimodal-fill-05"
+      ],
+      "source_path": "docs/exercises/multimodal-fill.md",
+      "title": "多模态代码填空",
+      "topics": [
+        "fill-in",
+        "multimodal",
+        "ViT",
+        "CLIP",
+        "LLaVA",
+        "vision-projector",
+        "video-sampling",
+        "vision-agent"
+      ]
+    },
+    {
+      "description": "Level 2-3 填空：Importance Ratio、GAE、Clipped Surrogate、Value Clipped、KL K1/K2/K3、Token Reward Shaping",
+      "id": "llm101-ppo-fill",
+      "item_ids": [
+        "llm101-ppo-fill-01",
+        "llm101-ppo-fill-02",
+        "llm101-ppo-fill-03",
+        "llm101-ppo-fill-04",
+        "llm101-ppo-fill-05",
+        "llm101-ppo-fill-06"
+      ],
+      "source_path": "docs/exercises/ppo-fill.md",
+      "title": "PPO 代码填空",
+      "topics": [
+        "fill-in",
+        "PPO",
+        "GAE",
+        "clipped-surrogate",
+        "KL-estimation",
+        "importance-ratio",
+        "value-loss",
+        "RLHF"
+      ]
+    },
+    {
+      "description": "Level 2-3 填空：数据预处理、CLM 目标函数、学习率调度、训练监控",
+      "id": "llm101-pretraining-fill",
+      "item_ids": [
+        "llm101-pretraining-fill-01",
+        "llm101-pretraining-fill-02",
+        "llm101-pretraining-fill-03",
+        "llm101-pretraining-fill-04",
+        "llm101-pretraining-fill-05"
+      ],
+      "source_path": "docs/exercises/pretraining-fill.md",
+      "title": "预训练技术填空",
+      "topics": [
+        "fill-in",
+        "pretraining",
+        "CLM",
+        "data-pipeline",
+        "lr-schedule",
+        "training-loop"
+      ]
+    },
+    {
+      "description": "Level 1-3 填空：Few-Shot 构造、CoT 推理、Prompt 注入防御、自动评估指标",
+      "id": "llm101-prompt-eval-fill",
+      "item_ids": [
+        "llm101-prompt-eval-fill-01",
+        "llm101-prompt-eval-fill-02",
+        "llm101-prompt-eval-fill-03",
+        "llm101-prompt-eval-fill-04",
+        "llm101-prompt-eval-fill-05",
+        "llm101-prompt-eval-fill-06"
+      ],
+      "source_path": "docs/exercises/prompt-eval-fill.md",
+      "title": "Prompt Engineering 与评估填空",
+      "topics": [
+        "fill-in",
+        "prompt-engineering",
+        "few-shot",
+        "chain-of-thought",
+        "evaluation",
+        "BLEU",
+        "ROUGE"
+      ]
+    },
+    {
+      "description": "Level 2-3 填空：Absmax 量化、Zero-Point 量化、GPTQ 核心、AWQ 核心",
+      "id": "llm101-quantization-fill",
+      "item_ids": [
+        "llm101-quantization-fill-01",
+        "llm101-quantization-fill-02",
+        "llm101-quantization-fill-03",
+        "llm101-quantization-fill-04",
+        "llm101-quantization-fill-05"
+      ],
+      "source_path": "docs/exercises/quantization-fill.md",
+      "title": "量化技术填空",
+      "topics": [
+        "fill-in",
+        "quantization",
+        "INT8",
+        "INT4",
+        "absmax",
+        "zero-point",
+        "GPTQ",
+        "AWQ"
+      ]
+    },
+    {
+      "description": "Level 2-3 填空：文本分块、向量检索、ReAct Agent、Tool Calling",
+      "id": "llm101-rag-agent-fill",
+      "item_ids": [
+        "llm101-rag-agent-fill-01",
+        "llm101-rag-agent-fill-02",
+        "llm101-rag-agent-fill-03",
+        "llm101-rag-agent-fill-04",
+        "llm101-rag-agent-fill-05"
+      ],
+      "source_path": "docs/exercises/rag-agent-fill.md",
+      "title": "RAG 与 Agent 填空",
+      "topics": [
+        "fill-in",
+        "RAG",
+        "agent",
+        "chunking",
+        "embedding",
+        "retrieval",
+        "ReAct",
+        "tool-calling"
+      ]
+    },
+    {
+      "description": "Level 4 端到端实现：分块策略、Embedding 检索、Hybrid Search、Reranker、Query Rewriting、生成",
+      "id": "llm101-rag-build",
+      "item_ids": [
+        "llm101-rag-build-01"
+      ],
+      "source_path": "docs/exercises/rag-build.md",
+      "title": "RAG 系统实现挑战",
+      "topics": [
+        "build",
+        "RAG",
+        "retrieval",
+        "embedding",
+        "vector-store",
+        "BM25",
+        "hybrid-search",
+        "reranker",
+        "chunking"
+      ]
+    },
+    {
+      "description": "Level 4 端到端实现：SFT 微调、Reward Model 训练、PPO 优化（含 KL、value head、GAE）",
+      "id": "llm101-rlhf-build",
+      "item_ids": [
+        "llm101-rlhf-build-01"
+      ],
+      "source_path": "docs/exercises/rlhf-build.md",
+      "title": "RLHF Pipeline 实现挑战",
+      "topics": [
+        "build",
+        "RLHF",
+        "PPO",
+        "reward-model",
+        "SFT",
+        "value-head",
+        "GAE",
+        "KL-penalty",
+        "end-to-end"
+      ]
+    },
+    {
+      "description": "Level 1-3 填空：参数量计算、FLOPs 估算、Chinchilla 最优配比、Loss 预测",
+      "id": "llm101-scaling-laws-fill",
+      "item_ids": [
+        "llm101-scaling-laws-fill-01",
+        "llm101-scaling-laws-fill-02",
+        "llm101-scaling-laws-fill-03",
+        "llm101-scaling-laws-fill-04",
+        "llm101-scaling-laws-fill-05"
+      ],
+      "source_path": "docs/exercises/scaling-laws-fill.md",
+      "title": "Scaling Laws 填空",
+      "topics": [
+        "fill-in",
+        "scaling-laws",
+        "FLOPs",
+        "Chinchilla",
+        "compute-optimal",
+        "parameter-counting"
+      ]
+    },
+    {
+      "description": "Level 2-3 填空：Chat Template、Loss Masking、数据整理、梯度累积",
+      "id": "llm101-sft-training-fill",
+      "item_ids": [
+        "llm101-sft-training-fill-01",
+        "llm101-sft-training-fill-02",
+        "llm101-sft-training-fill-03",
+        "llm101-sft-training-fill-04",
+        "llm101-sft-training-fill-05"
+      ],
+      "source_path": "docs/exercises/sft-training-fill.md",
+      "title": "SFT 训练 Pipeline 填空",
+      "topics": [
+        "fill-in",
+        "SFT",
+        "chat-template",
+        "loss-masking",
+        "gradient-accumulation",
+        "data-collation"
+      ]
+    },
+    {
+      "description": "Level 1-3 填空：BPE 训练、WordPiece、SentencePiece、中文分词挑战",
+      "id": "llm101-tokenization-fill",
+      "item_ids": [
+        "llm101-tokenization-fill-01",
+        "llm101-tokenization-fill-02",
+        "llm101-tokenization-fill-03",
+        "llm101-tokenization-fill-04",
+        "llm101-tokenization-fill-05"
+      ],
+      "source_path": "docs/exercises/tokenization-fill.md",
+      "title": "Tokenization 分词填空",
+      "topics": [
+        "fill-in",
+        "tokenization",
+        "BPE",
+        "WordPiece",
+        "SentencePiece",
+        "vocabulary"
+      ]
+    },
+    {
+      "description": "Level 1 选择题：注意力机制、位置编码、Decoder-Only 设计",
+      "id": "llm101-transformer-quiz",
+      "item_ids": [
+        "llm101-transformer-quiz-01",
+        "llm101-transformer-quiz-02",
+        "llm101-transformer-quiz-03",
+        "llm101-transformer-quiz-04",
+        "llm101-transformer-quiz-05",
+        "llm101-transformer-quiz-06"
+      ],
+      "source_path": "docs/exercises/transformer-quiz.md",
+      "title": "Transformer 概念题",
+      "topics": [
+        "quiz",
+        "transformer",
+        "attention",
+        "positional-encoding"
+      ]
+    }
+  ],
+  "source": "llm101"
+}

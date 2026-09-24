@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-from app.config import settings
 from app.rag.ingest import chunk_text, parse_front_matter
-
-
-def _all_roots() -> list[Path]:
-    return [settings.knowledge_dir, *settings.extra_knowledge_dirs]
+from app.rag.knowledge_roots import resolve_knowledge_roots
 
 
 def get_by_source_id(source_id: str) -> dict | None:
-    for root in _all_roots():
+    for root in resolve_knowledge_roots():
         if not root.exists():
             continue
         for md_path in root.rglob("*.md"):
@@ -34,7 +28,7 @@ def get_by_source_id(source_id: str) -> dict | None:
 
 def list_source_ids(corpus: str | None = None) -> list[str]:
     ids: list[str] = []
-    for root in _all_roots():
+    for root in resolve_knowledge_roots():
         if not root.exists():
             continue
         for md_path in root.rglob("*.md"):

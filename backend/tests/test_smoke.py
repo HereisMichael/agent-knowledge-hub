@@ -13,9 +13,11 @@ os.environ["PROJECT_ROOT"] = str(ROOT)
 os.environ["CONTENT_ROOT"] = str(ROOT / "content")
 os.environ["DEMO_MODE"] = "true"
 os.environ["CONTENT_SCHEDULER_ENABLED"] = "false"
+os.environ["AUTH_INVITE_CODE"] = "test-invite-2026"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
+from app.config import settings  # noqa: E402
 from app.db.store import init_db  # noqa: E402
 from app.main import app  # noqa: E402
 from app.rag.ingest import ingest_knowledge  # noqa: E402
@@ -24,9 +26,30 @@ from app.interview.questions import load_questions  # noqa: E402
 
 @pytest.fixture(scope="module", autouse=True)
 def setup():
+    database = Path(os.environ["SQLITE_PATH"])
+    privacy_ledger = database.with_name("test_smoke_privacy_ledger.db")
+    if database.exists():
+        database.unlink()
+    if privacy_ledger.exists():
+        privacy_ledger.unlink()
+    settings.sqlite_path = str(database)
+    settings.privacy_ledger_path = str(privacy_ledger)
+    settings.privacy_ledger_id = "test-smoke-ledger"
+    settings.auth_invite_code = "test-invite-2026"
+    settings.app_env = "test"
     init_db()
     ingest_knowledge()
     load_questions(reload=True)
+    client.cookies.clear()
+    response = client.post(
+        "/api/auth/register",
+        json={
+            "email": "smoke-admin@example.com",
+            "password": "correct horse battery staple",
+            "invite_code": "test-invite-2026",
+        },
+    )
+    assert response.status_code == 201
 
 
 client = TestClient(app)
@@ -41,7 +64,10 @@ def test_health():
 def test_ask():
     r = client.post("/api/ask", json={"question": "什么是 Harness", "corpus": "tech"})
     assert r.status_code == 200
-    assert "answer" in r.json()
+    body = r.json()
+    assert "answer" in body
+    assert body["citation_details"]
+    assert {"source_id", "path", "excerpt"} <= body["citation_details"][0].keys()
 
 
 def test_quiz_flow():
@@ -89,7 +115,7 @@ def test_progress_radar():
 
 
 def test_ingest_incremental():
-    r = client.post("/api/ingest", json={"full": False}, headers={"X-Admin-Key": "change-me-admin-key"})
+    r = client.post("/api/ingest", json={"full": False})
     assert r.status_code == 200
     body = r.json()
     assert body["mode"] == "incremental"

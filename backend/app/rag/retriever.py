@@ -9,6 +9,7 @@ from rank_bm25 import BM25Okapi
 
 from app.config import settings
 from app.rag.ingest import COLLECTION_NAME, chunk_text, parse_front_matter
+from app.rag.knowledge_roots import resolve_knowledge_roots
 
 
 @dataclass
@@ -22,6 +23,7 @@ class RetrievedChunk:
 
 class HybridRetriever:
     def __init__(self) -> None:
+        resolve_knowledge_roots()
         self._chroma = chromadb.PersistentClient(
             path=settings.chroma_path,
             settings=ChromaSettings(anonymized_telemetry=False),
@@ -33,10 +35,10 @@ class HybridRetriever:
         self.reload_bm25()
 
     def reload_bm25(self) -> None:
+        roots = resolve_knowledge_roots()
         self._bm25_docs = []
         self._bm25_meta = []
         self._bm25 = None
-        roots = [settings.knowledge_dir, *settings.extra_knowledge_dirs]
         for root in roots:
             if not root.exists():
                 continue

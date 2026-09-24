@@ -5,11 +5,20 @@ from __future__ import annotations
 import json
 import sqlite3
 import uuid
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from app.config import settings
+from app.security.credential_vault import EncryptedSecret
+
+
+_SETTINGS_REVISION_UNSET = object()
+
+
+class SettingsWriteConflict(RuntimeError):
+    """Raised when a settings profile changed after it was read."""
 
 
 def _conn() -> sqlite3.Connection:
@@ -17,11 +26,13 @@ def _conn() -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(path), check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA secure_delete = ON")
     return conn
 
 
 def init_db() -> None:
-    with _conn() as c:
+    with closing(_conn()) as c:
         c.executescript(
             """
             CREATE TABLE IF NOT EXISTS user_answers (
@@ -102,54 +113,385 @@ def init_db() -> None:
                 published_at TEXT NOT NULL,
                 rolled_back INTEGER NOT NULL DEFAULT 0
             );
+            CREATE TABLE IF NOT EXISTS users (
+                id TEXT PRIMARY KEY,
+                email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL CHECK (role IN ('admin', 'member')),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS auth_sessions (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                token_hash TEXT NOT NULL UNIQUE,
+                expires_at TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                revoked_at TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_auth_sessions_token_hash
+                ON auth_sessions(token_hash);
             """
         )
     _migrate_columns()
+    from app.db.migrations import run_migrations
+
+    with closing(_conn()) as c:
+        run_migrations(c)
+    from app.privacy.tombstones import apply_deletions, ensure_ledger
+
+    ensure_ledger()
+    apply_deletions(settings.sqlite_path)
 
 
 def _migrate_columns() -> None:
-    with _conn() as c:
-        cols = {row[1] for row in c.execute("PRAGMA table_info(mock_sessions)").fetchall()}
-        if "stage_started_at" not in cols:
-            c.execute("ALTER TABLE mock_sessions ADD COLUMN stage_started_at TEXT")
+    with closing(_conn()) as c:
+        c.execute("BEGIN IMMEDIATE")
+        try:
+            cols = {row[1] for row in c.execute("PRAGMA table_info(mock_sessions)").fetchall()}
+            if "stage_started_at" not in cols:
+                c.execute("ALTER TABLE mock_sessions ADD COLUMN stage_started_at TEXT")
 
-        ua_cols = {row[1] for row in c.execute("PRAGMA table_info(user_answers)").fetchall()}
-        for col, ddl in (
-            ("reference_answer", "TEXT"),
-            ("feedback", "TEXT"),
-            ("model_name", "TEXT"),
-            ("comparison_detail", "TEXT"),
-        ):
-            if col not in ua_cols:
-                c.execute(f"ALTER TABLE user_answers ADD COLUMN {col} {ddl}")
+            ua_cols = {row[1] for row in c.execute("PRAGMA table_info(user_answers)").fetchall()}
+            for col, ddl in (
+                ("reference_answer", "TEXT"),
+                ("feedback", "TEXT"),
+                ("model_name", "TEXT"),
+                ("comparison_detail", "TEXT"),
+            ):
+                if col not in ua_cols:
+                    c.execute(f"ALTER TABLE user_answers ADD COLUMN {col} {ddl}")
 
-        c.execute(
-            """
-            CREATE TABLE IF NOT EXISTS user_settings (
+            c.execute(
+                """
+                CREATE TABLE IF NOT EXISTS user_settings (
                 user_id TEXT PRIMARY KEY,
                 llm_base_url TEXT,
                 llm_api_key TEXT,
+                llm_api_key_ciphertext TEXT,
+                llm_api_key_nonce TEXT,
+                llm_api_key_version TEXT,
+                llm_api_key_hint TEXT,
+                llm_api_key_audience TEXT,
+                llm_protocol TEXT NOT NULL DEFAULT 'openai_chat'
+                    CHECK (llm_protocol IN ('openai_chat', 'anthropic_messages')),
                 llm_model TEXT,
                 force_demo INTEGER NOT NULL DEFAULT 0,
                 updated_at TEXT NOT NULL
+                )
+                """
             )
-            """
-        )
-        c.execute(
-            """
-            CREATE TABLE IF NOT EXISTS user_reference_answers (
+            settings_cols = {
+                row[1] for row in c.execute("PRAGMA table_info(user_settings)").fetchall()
+            }
+            for col in (
+                "llm_api_key_ciphertext",
+                "llm_api_key_nonce",
+                "llm_api_key_version",
+                "llm_api_key_hint",
+                "llm_api_key_audience",
+            ):
+                if col not in settings_cols:
+                    c.execute(f"ALTER TABLE user_settings ADD COLUMN {col} TEXT")
+            c.execute(
+                """
+                CREATE TABLE IF NOT EXISTS user_reference_answers (
                 user_id TEXT NOT NULL,
                 question_id TEXT NOT NULL,
                 reference_text TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 PRIMARY KEY (user_id, question_id)
+                )
+                """
             )
-            """
-        )
+            c.commit()
+        except Exception:
+            c.rollback()
+            raise
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+# --- Authentication ---
+
+
+def _normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+
+def _public_user(row: sqlite3.Row) -> dict:
+    return {
+        "id": row["id"],
+        "email": row["email"],
+        "role": row["role"],
+        "created_at": row["created_at"],
+    }
+
+
+def create_user(
+    email: str,
+    password_hash: str,
+    *,
+    rewrap_credential: (
+        Callable[[EncryptedSecret, str, str], EncryptedSecret] | None
+    ) = None,
+) -> dict:
+    user_id = str(uuid.uuid4())
+    normalized_email = _normalize_email(email)
+    now = _now()
+    try:
+        with _conn() as c:
+            c.execute("BEGIN IMMEDIATE")
+            user_count = c.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+            role = "admin" if user_count == 0 else "member"
+            c.execute(
+                """INSERT INTO users
+                   (id, email, password_hash, role, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (user_id, normalized_email, password_hash, role, now, now),
+            )
+            if role == "admin":
+                _claim_legacy_user_data(
+                    c,
+                    user_id,
+                    rewrap_credential=rewrap_credential,
+                )
+            row = c.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    except sqlite3.IntegrityError as exc:
+        raise ValueError("email_exists") from exc
+    return _public_user(row)
+
+
+def get_user_by_email(email: str) -> dict | None:
+    with _conn() as c:
+        row = c.execute(
+            "SELECT * FROM users WHERE email = ? COLLATE NOCASE",
+            (_normalize_email(email),),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def get_user_by_id(user_id: str) -> dict | None:
+    with _conn() as c:
+        row = c.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def export_user_data(user_id: str) -> dict:
+    with closing(_conn()) as c:
+        c.execute("BEGIN")
+        try:
+            user = c.execute(
+                """
+                SELECT id, email, role, created_at, updated_at
+                FROM users WHERE id = ?
+                """,
+                (user_id,),
+            ).fetchone()
+            if user is None:
+                raise ValueError("user_not_found")
+
+            def rows(table: str) -> list[dict]:
+                return [
+                    dict(row)
+                    for row in c.execute(
+                        f"SELECT * FROM {table} WHERE user_id = ?",
+                        (user_id,),
+                    ).fetchall()
+                ]
+
+            settings_row = c.execute(
+                """
+                SELECT llm_base_url, llm_protocol, llm_model, force_demo, updated_at,
+                       CASE
+                         WHEN llm_api_key_ciphertext IS NOT NULL
+                              AND llm_api_key_ciphertext != ''
+                         THEN 1 ELSE 0
+                       END AS has_api_key
+                FROM user_settings WHERE user_id = ?
+                """,
+                (user_id,),
+            ).fetchone()
+            return {
+                "profile": dict(user),
+                "settings": (
+                    {
+                        **dict(settings_row),
+                        "force_demo": bool(settings_row["force_demo"]),
+                        "has_api_key": bool(settings_row["has_api_key"]),
+                    }
+                    if settings_row
+                    else {
+                        "llm_base_url": None,
+                        "llm_protocol": "openai_chat",
+                        "llm_model": None,
+                        "force_demo": False,
+                        "updated_at": None,
+                        "has_api_key": False,
+                    }
+                ),
+                "answers": rows("user_answers"),
+                "exercise_attempts": rows("exercise_attempts"),
+                "mock_sessions": rows("mock_sessions"),
+                "lab_completions": rows("lab_completions"),
+                "review_cards": rows("review_cards"),
+                "reference_answers": rows("user_reference_answers"),
+            }
+        finally:
+            c.rollback()
+
+
+def delete_user_account(
+    user_id: str,
+    before_delete: Callable[[str], None] | None = None,
+) -> None:
+    deletion_recorded = False
+    with _conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        try:
+            user = c.execute(
+                "SELECT role FROM users WHERE id = ?",
+                (user_id,),
+            ).fetchone()
+            if user is None:
+                raise ValueError("user_not_found")
+            if user["role"] == "admin":
+                administrator_count = c.execute(
+                    "SELECT COUNT(*) FROM users WHERE role = 'admin'"
+                ).fetchone()[0]
+                other_user_count = c.execute(
+                    "SELECT COUNT(*) FROM users WHERE id != ?",
+                    (user_id,),
+                ).fetchone()[0]
+                if administrator_count == 1 and other_user_count > 0:
+                    raise ValueError("last_admin")
+            if before_delete is not None:
+                before_delete(user_id)
+                deletion_recorded = True
+            from app.privacy.tombstones import USER_OWNED_TABLES
+
+            for table in USER_OWNED_TABLES:
+                c.execute(f"DELETE FROM {table} WHERE user_id = ?", (user_id,))
+            c.execute("DELETE FROM users WHERE id = ?", (user_id,))
+            c.commit()
+        except Exception:
+            c.rollback()
+            if deletion_recorded:
+                return
+            raise
+
+
+def create_auth_session(user_id: str, token_hash: str, expires_at: str) -> dict:
+    session_id = str(uuid.uuid4())
+    created_at = _now()
+    with _conn() as c:
+        c.execute(
+            """INSERT INTO auth_sessions
+               (id, user_id, token_hash, expires_at, created_at, revoked_at)
+               VALUES (?, ?, ?, ?, ?, NULL)""",
+            (session_id, user_id, token_hash, expires_at, created_at),
+        )
+    return {
+        "id": session_id,
+        "user_id": user_id,
+        "expires_at": expires_at,
+        "created_at": created_at,
+    }
+
+
+def get_identity_by_token_hash(token_hash: str, now: str) -> dict | None:
+    with _conn() as c:
+        row = c.execute(
+            """SELECT users.id AS user_id, users.email, users.role
+               FROM auth_sessions
+               JOIN users ON users.id = auth_sessions.user_id
+               WHERE auth_sessions.token_hash = ?
+                 AND auth_sessions.revoked_at IS NULL
+                 AND auth_sessions.expires_at > ?""",
+            (token_hash, now),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def revoke_auth_session(token_hash: str) -> None:
+    with _conn() as c:
+        c.execute(
+            """UPDATE auth_sessions
+               SET revoked_at = ?
+               WHERE token_hash = ? AND revoked_at IS NULL""",
+            (_now(), token_hash),
+        )
+
+
+def _claim_legacy_user_data(
+    c: sqlite3.Connection,
+    user_id: str,
+    *,
+    rewrap_credential: (
+        Callable[[EncryptedSecret, str, str], EncryptedSecret] | None
+    ) = None,
+) -> None:
+    user_tables = (
+        "user_answers",
+        "mock_sessions",
+        "lab_completions",
+        "review_cards",
+        "user_reference_answers",
+    )
+    settings_row = c.execute(
+        "SELECT * FROM user_settings WHERE user_id = 'default'"
+    ).fetchone()
+    if settings_row:
+        encrypted: EncryptedSecret | None = None
+        if settings_row["llm_api_key_ciphertext"]:
+            if rewrap_credential is None:
+                raise ValueError("encrypted legacy credential requires rewrapping")
+            current = EncryptedSecret(
+                ciphertext=settings_row["llm_api_key_ciphertext"],
+                nonce=settings_row["llm_api_key_nonce"],
+                key_version=settings_row["llm_api_key_version"],
+                hint=settings_row["llm_api_key_hint"] or "",
+                audience=settings_row["llm_api_key_audience"] or "",
+            )
+            encrypted = rewrap_credential(current, "default", user_id)
+        c.execute(
+            """UPDATE user_settings
+               SET user_id = ?,
+                   llm_api_key_ciphertext = ?,
+                   llm_api_key_nonce = ?,
+                   llm_api_key_version = ?,
+                   llm_api_key_hint = ?,
+                   llm_api_key_audience = ?
+               WHERE user_id = 'default'""",
+            (
+                user_id,
+                (
+                    encrypted.ciphertext
+                    if encrypted
+                    else settings_row["llm_api_key_ciphertext"]
+                ),
+                encrypted.nonce if encrypted else settings_row["llm_api_key_nonce"],
+                (
+                    encrypted.key_version
+                    if encrypted
+                    else settings_row["llm_api_key_version"]
+                ),
+                encrypted.hint if encrypted else settings_row["llm_api_key_hint"],
+                (
+                    encrypted.audience
+                    if encrypted
+                    else settings_row["llm_api_key_audience"]
+                ),
+            ),
+        )
+    for table in user_tables:
+        c.execute(
+            f"UPDATE {table} SET user_id = ? WHERE user_id = 'default'",
+            (user_id,),
+        )
 
 
 # --- Quiz ---
@@ -241,29 +583,196 @@ def get_user_settings(user_id: str = "default") -> dict:
     return dict(r)
 
 
-def upsert_user_settings(user_id: str, payload: dict) -> None:
-    row = get_user_settings(user_id)
-    base_url = payload["llm_base_url"] if "llm_base_url" in payload else row.get("llm_base_url")
-    model = payload["llm_model"] if "llm_model" in payload else row.get("llm_model")
-    force_demo = int(
-        payload["force_demo"] if "force_demo" in payload else (row.get("force_demo") or 0)
-    )
-    api_key = row.get("llm_api_key")
-    if payload.get("llm_api_key"):
-        api_key = payload["llm_api_key"]
-    now = _now()
+def upsert_user_settings(
+    user_id: str,
+    payload: dict,
+    *,
+    encrypted_api_key: EncryptedSecret | None = None,
+    expected_updated_at: str | None | object = _SETTINGS_REVISION_UNSET,
+) -> None:
+    if "llm_api_key" in payload:
+        raise ValueError("plaintext credentials are not accepted by the store")
     with _conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        current = c.execute(
+            "SELECT * FROM user_settings WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+        row = dict(current) if current else {"user_id": user_id}
+        current_revision = row.get("updated_at")
+        if (
+            expected_updated_at is not _SETTINGS_REVISION_UNSET
+            and current_revision != expected_updated_at
+        ):
+            raise SettingsWriteConflict("settings changed during update")
+        base_url = (
+            payload["llm_base_url"]
+            if "llm_base_url" in payload
+            else row.get("llm_base_url")
+        )
+        model = (
+            payload["llm_model"] if "llm_model" in payload else row.get("llm_model")
+        )
+        protocol = (
+            payload["llm_protocol"]
+            if "llm_protocol" in payload
+            else (row.get("llm_protocol") or "openai_chat")
+        )
+        force_demo = int(
+            payload["force_demo"]
+            if "force_demo" in payload
+            else (row.get("force_demo") or 0)
+        )
+        ciphertext = row.get("llm_api_key_ciphertext")
+        nonce = row.get("llm_api_key_nonce")
+        key_version = row.get("llm_api_key_version")
+        key_hint = row.get("llm_api_key_hint")
+        key_audience = row.get("llm_api_key_audience")
+        if encrypted_api_key is not None:
+            ciphertext = encrypted_api_key.ciphertext
+            nonce = encrypted_api_key.nonce
+            key_version = encrypted_api_key.key_version
+            key_hint = encrypted_api_key.hint
+            key_audience = encrypted_api_key.audience
         c.execute(
-            """INSERT INTO user_settings (user_id, llm_base_url, llm_api_key, llm_model, force_demo, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?)
+            """INSERT INTO user_settings (
+                 user_id, llm_base_url, llm_api_key,
+                 llm_api_key_ciphertext, llm_api_key_nonce,
+                 llm_api_key_version, llm_api_key_hint,
+                 llm_api_key_audience, llm_protocol, llm_model, force_demo, updated_at
+               )
+               VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(user_id) DO UPDATE SET
                  llm_base_url = excluded.llm_base_url,
-                 llm_api_key = excluded.llm_api_key,
+                 llm_api_key = NULL,
+                 llm_api_key_ciphertext = excluded.llm_api_key_ciphertext,
+                 llm_api_key_nonce = excluded.llm_api_key_nonce,
+                 llm_api_key_version = excluded.llm_api_key_version,
+                 llm_api_key_hint = excluded.llm_api_key_hint,
+                 llm_api_key_audience = excluded.llm_api_key_audience,
+                 llm_protocol = excluded.llm_protocol,
                  llm_model = excluded.llm_model,
                  force_demo = excluded.force_demo,
                  updated_at = excluded.updated_at""",
-            (user_id, base_url, api_key, model, force_demo, now),
+            (
+                user_id,
+                base_url,
+                ciphertext,
+                nonce,
+                key_version,
+                key_hint,
+                key_audience,
+                protocol,
+                model,
+                force_demo,
+                _now(),
+            ),
         )
+
+
+def list_legacy_llm_keys() -> list[dict]:
+    with _conn() as c:
+        rows = c.execute(
+            """SELECT user_id, llm_api_key
+               FROM user_settings
+               WHERE llm_api_key IS NOT NULL
+                 AND TRIM(llm_api_key) != ''"""
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def migrate_legacy_llm_keys(
+    encrypt: Callable[[str, str, str | None], EncryptedSecret],
+) -> int:
+    with _conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        rows = c.execute(
+            """SELECT user_id, llm_api_key, llm_base_url
+               FROM user_settings
+               WHERE llm_api_key IS NOT NULL
+                 AND TRIM(llm_api_key) != ''"""
+        ).fetchall()
+        for row in rows:
+            encrypted = encrypt(
+                row["llm_api_key"],
+                row["user_id"],
+                row["llm_base_url"],
+            )
+            updated = c.execute(
+                """UPDATE user_settings
+                   SET llm_api_key = NULL,
+                       llm_api_key_ciphertext = ?,
+                       llm_api_key_nonce = ?,
+                       llm_api_key_version = ?,
+                       llm_api_key_hint = ?,
+                       llm_api_key_audience = ?,
+                       updated_at = ?
+                   WHERE user_id = ? AND llm_api_key = ?""",
+                (
+                    encrypted.ciphertext,
+                    encrypted.nonce,
+                    encrypted.key_version,
+                    encrypted.hint,
+                    encrypted.audience,
+                    _now(),
+                    row["user_id"],
+                    row["llm_api_key"],
+                ),
+            )
+            if updated.rowcount != 1:
+                raise RuntimeError("legacy credential changed during migration")
+        return len(rows)
+
+
+def migrate_unbound_llm_keys(
+    rewrap: Callable[[EncryptedSecret, str, str | None], EncryptedSecret],
+) -> int:
+    with _conn() as c:
+        c.execute("BEGIN IMMEDIATE")
+        rows = c.execute(
+            """SELECT *
+               FROM user_settings
+               WHERE llm_api_key_ciphertext IS NOT NULL
+                 AND (
+                   llm_api_key_audience IS NULL
+                   OR TRIM(llm_api_key_audience) = ''
+                 )"""
+        ).fetchall()
+        for row in rows:
+            current = EncryptedSecret(
+                ciphertext=row["llm_api_key_ciphertext"],
+                nonce=row["llm_api_key_nonce"],
+                key_version=row["llm_api_key_version"],
+                hint=row["llm_api_key_hint"] or "",
+                audience="",
+            )
+            encrypted = rewrap(current, row["user_id"], row["llm_base_url"])
+            c.execute(
+                """UPDATE user_settings
+                   SET llm_api_key_ciphertext = ?,
+                       llm_api_key_nonce = ?,
+                       llm_api_key_version = ?,
+                       llm_api_key_hint = ?,
+                       llm_api_key_audience = ?,
+                       updated_at = ?
+                   WHERE user_id = ?
+                     AND llm_api_key_ciphertext = ?
+                     AND (
+                       llm_api_key_audience IS NULL
+                       OR TRIM(llm_api_key_audience) = ''
+                     )""",
+                (
+                    encrypted.ciphertext,
+                    encrypted.nonce,
+                    encrypted.key_version,
+                    encrypted.hint,
+                    encrypted.audience,
+                    _now(),
+                    row["user_id"],
+                    row["llm_api_key_ciphertext"],
+                ),
+            )
+        return len(rows)
 
 
 # --- Reference answers (persistent memory per question) ---
@@ -363,9 +872,12 @@ def create_mock_session(
     return row
 
 
-def get_mock_session(session_id: str) -> dict:
+def get_mock_session(session_id: str, user_id: str) -> dict:
     with _conn() as c:
-        r = c.execute("SELECT * FROM mock_sessions WHERE id = ?", (session_id,)).fetchone()
+        r = c.execute(
+            "SELECT * FROM mock_sessions WHERE id = ? AND user_id = ?",
+            (session_id, user_id),
+        ).fetchone()
     if not r:
         raise KeyError(session_id)
     return _mock_row_to_dict(r)
@@ -390,7 +902,7 @@ def _mock_row_to_dict(r: sqlite3.Row) -> dict:
     }
 
 
-def update_mock_session(session_id: str, **kwargs: Any) -> dict:
+def update_mock_session(session_id: str, user_id: str, **kwargs: Any) -> dict:
     allowed = {
         "stage",
         "transcript",
@@ -411,9 +923,15 @@ def update_mock_session(session_id: str, **kwargs: Any) -> dict:
     sets.append("updated_at = ?")
     vals.append(_now())
     vals.append(session_id)
+    vals.append(user_id)
     with _conn() as c:
-        c.execute(f"UPDATE mock_sessions SET {', '.join(sets)} WHERE id = ?", vals)
-    return get_mock_session(session_id)
+        cursor = c.execute(
+            f"UPDATE mock_sessions SET {', '.join(sets)} WHERE id = ? AND user_id = ?",
+            vals,
+        )
+        if cursor.rowcount == 0:
+            raise KeyError(session_id)
+    return get_mock_session(session_id, user_id)
 
 
 def list_mock_sessions(user_id: str = "default", limit: int = 20) -> list[dict]:
@@ -444,6 +962,82 @@ def list_completed_labs(user_id: str = "default") -> list[str]:
             "SELECT lab_id FROM lab_completions WHERE user_id = ?", (user_id,)
         ).fetchall()
     return [r["lab_id"] for r in rows]
+
+
+# --- LLM-101-CN exercise attempts ---
+
+
+def create_exercise_attempt(
+    user_id: str,
+    exercise_id: str,
+    answers: dict,
+    status: str,
+    score: int | None,
+    notes: str,
+    *,
+    feedback: dict | None = None,
+    revealed: bool = False,
+) -> dict:
+    attempt_id = str(uuid.uuid4())
+    created_at = _now()
+    with _conn() as c:
+        c.execute(
+            """
+            INSERT INTO exercise_attempts
+                (id, user_id, exercise_id, answers_json, status, score,
+                 feedback_json, revealed_at, notes, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                attempt_id, user_id, exercise_id,
+                json.dumps(answers, ensure_ascii=False), status, score,
+                json.dumps(feedback or {}, ensure_ascii=False),
+                created_at if revealed else None, notes, created_at,
+            ),
+        )
+    return {
+        "id": attempt_id, "user_id": user_id, "exercise_id": exercise_id,
+        "status": status, "score": score, "created_at": created_at,
+    }
+
+
+def list_exercise_attempts(user_id: str, limit: int = 100) -> list[dict]:
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT id, exercise_id, status, score, created_at FROM exercise_attempts "
+            "WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
+            (user_id, max(1, min(limit, 500))),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_exercise_progress(user_id: str) -> dict:
+    with _conn() as c:
+        rows = c.execute(
+            """
+            SELECT exercise_id, COUNT(*) AS attempts, MAX(score) AS best_score,
+                   MAX(created_at) AS last_attempt_at
+            FROM exercise_attempts WHERE user_id = ? GROUP BY exercise_id
+            ORDER BY last_attempt_at DESC
+            """,
+            (user_id,),
+        ).fetchall()
+    items = [dict(row) for row in rows]
+    return {
+        "total_attempts": sum(item["attempts"] for item in items),
+        "completed_items": len(items),
+        "items": items,
+    }
+
+
+def exercise_attempt_summary_rows(user_id: str) -> list[dict]:
+    """Read all attempts for a user's topic/level aggregation, without a UI page limit."""
+    with _conn() as c:
+        rows = c.execute(
+            "SELECT exercise_id, status, score FROM exercise_attempts WHERE user_id = ?",
+            (user_id,),
+        ).fetchall()
+    return [dict(row) for row in rows]
 
 
 # --- Content governance ---
@@ -574,6 +1168,151 @@ def get_content_feed(limit: int = 20) -> list[dict]:
             "SELECT * FROM content_changelog ORDER BY published_at DESC LIMIT ?", (limit,)
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+def create_content_source(
+    *,
+    source_path: str,
+    source_url: str,
+    retrieved_at: str,
+    source_title: str | None = None,
+    publisher: str | None = None,
+    rights_note: str | None = None,
+    content_item_id: str | None = None,
+) -> dict:
+    source_id = str(uuid.uuid4())
+    now = _now()
+    with _conn() as c:
+        c.execute(
+            """
+            INSERT INTO content_sources (
+                id, content_item_id, source_path, source_url, source_title,
+                publisher, retrieved_at, rights_note, status, created_at,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+            """,
+            (
+                source_id,
+                content_item_id,
+                source_path,
+                source_url,
+                source_title,
+                publisher,
+                retrieved_at,
+                rights_note,
+                now,
+                now,
+            ),
+        )
+    return get_content_source(source_id)
+
+
+def get_content_source(source_id: str) -> dict:
+    with _conn() as c:
+        row = c.execute(
+            "SELECT * FROM content_sources WHERE id = ?",
+            (source_id,),
+        ).fetchone()
+    if row is None:
+        raise KeyError(source_id)
+    return dict(row)
+
+
+def list_content_sources(status: str | None = None) -> list[dict]:
+    with _conn() as c:
+        if status:
+            rows = c.execute(
+                """
+                SELECT * FROM content_sources
+                WHERE status = ?
+                ORDER BY created_at DESC, id DESC
+                """,
+                (status,),
+            ).fetchall()
+        else:
+            rows = c.execute(
+                """
+                SELECT * FROM content_sources
+                ORDER BY created_at DESC, id DESC
+                """
+            ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def list_content_takedown_events(source_id: str) -> list[dict]:
+    with _conn() as c:
+        rows = c.execute(
+            """
+            SELECT * FROM content_takedown_log
+            WHERE source_id = ?
+            ORDER BY created_at, id
+            """,
+            (source_id,),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_content_takedown_event(event_id: str) -> dict:
+    with _conn() as c:
+        row = c.execute(
+            "SELECT * FROM content_takedown_log WHERE id = ?",
+            (event_id,),
+        ).fetchone()
+    if row is None:
+        raise KeyError(event_id)
+    return dict(row)
+
+
+def record_content_takedown(
+    source_id: str,
+    actor_user_id: str,
+    action: str,
+    reason: str,
+) -> dict:
+    status_by_action = {
+        "requested": "takedown_requested",
+        "removed": "removed",
+        "restored": "active",
+    }
+    if action not in status_by_action:
+        raise ValueError("invalid takedown action")
+    event_id = str(uuid.uuid4())
+    now = _now()
+    with closing(_conn()) as c:
+        c.execute("BEGIN IMMEDIATE")
+        try:
+            existing = c.execute(
+                "SELECT 1 FROM content_sources WHERE id = ?",
+                (source_id,),
+            ).fetchone()
+            if existing is None:
+                raise KeyError(source_id)
+            c.execute(
+                """
+                UPDATE content_sources
+                SET status = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (status_by_action[action], now, source_id),
+            )
+            c.execute(
+                """
+                INSERT INTO content_takedown_log (
+                    id, source_id, actor_user_id, action, reason, created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (event_id, source_id, actor_user_id, action, reason, now),
+            )
+            c.commit()
+        except Exception:
+            c.rollback()
+            raise
+    return {
+        "source": get_content_source(source_id),
+        "event": get_content_takedown_event(event_id),
+    }
 
 
 # --- SM-2 review ---

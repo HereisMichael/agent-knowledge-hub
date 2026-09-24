@@ -5,13 +5,16 @@ from pathlib import Path
 
 from app.config import settings
 from app.db import store
+from app.exercises.catalog import load_items
 
 
 def load_manifest() -> list[dict]:
     path = Path(settings.project_root).resolve() / "labs" / "manifest.json"
     if not path.exists():
         return []
-    return json.loads(path.read_text(encoding="utf-8"))
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    published_ids = {item["id"] for item in load_items() if item.get("kind") == "implementation_challenge"}
+    return [lab for lab in manifest if not lab.get("source_exercise_id") or lab["source_exercise_id"] in published_ids]
 
 
 def recommend_labs(
@@ -53,4 +56,4 @@ def recommend_labs(
         scored.append((score, lab))
 
     scored.sort(key=lambda x: (-x[0], x[1].get("effort_hours", 99)))
-    return [lab for _, lab in scored[:limit]] or manifest[:limit]
+    return [lab for _, lab in scored[:limit]]

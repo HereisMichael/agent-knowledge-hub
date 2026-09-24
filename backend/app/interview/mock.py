@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
-from app.config import settings
 from app.db import store
 from app.interview.questions import pick_question
 from app.interview.stages import (
@@ -78,8 +77,13 @@ def start_message(session: dict) -> str:
     )
 
 
-def handle_message(session_id: str, user_message: str, want_hint: bool = False) -> dict:
-    session = store.get_mock_session(session_id)
+def handle_message(
+    session_id: str,
+    user_id: str,
+    user_message: str,
+    want_hint: bool = False,
+) -> dict:
+    session = store.get_mock_session(session_id, user_id)
     transcript = session["transcript"]
     transcript.append({"role": "user", "content": user_message})
 
@@ -88,6 +92,7 @@ def handle_message(session_id: str, user_message: str, want_hint: bool = False) 
         if new_stage:
             store.update_mock_session(
                 session_id,
+                user_id,
                 stage=new_stage,
                 stage_started_at=datetime.now(timezone.utc).isoformat(),
             )
@@ -97,8 +102,8 @@ def handle_message(session_id: str, user_message: str, want_hint: bool = False) 
         reply = _free_turn(session, user_message, want_hint)
 
     transcript.append({"role": "interviewer", "content": reply})
-    store.update_mock_session(session_id, transcript=transcript)
-    session = store.get_mock_session(session_id)
+    store.update_mock_session(session_id, user_id, transcript=transcript)
+    session = store.get_mock_session(session_id, user_id)
     return _with_timing(
         session,
         {"reply": reply, "stage": session.get("stage"), "transcript": transcript},
@@ -159,12 +164,13 @@ def _structured_turn(session: dict, user_message: str, want_hint: bool) -> tuple
     return reply, new_stage
 
 
-def finish_session(session_id: str) -> dict:
-    session = store.get_mock_session(session_id)
+def finish_session(session_id: str, user_id: str) -> dict:
+    session = store.get_mock_session(session_id, user_id)
+    runtime = resolve_llm(session["user_id"])
     transcript = session["transcript"]
     history = json.dumps(transcript[-20:], ensure_ascii=False)
 
-    if settings.use_demo_llm:
+    if runtime.demo:
         report = {
             "scores": {"structure": 75, "depth": 70, "communication": 78},
             "highlights": ["表达较清晰", "有项目经历"],
@@ -181,7 +187,7 @@ def finish_session(session_id: str) -> dict:
         report = chat_json(
             COACH_SYSTEM,
             f"生成面试报告：\n{history}",
-            runtime=resolve_llm(session.get("user_id", "default")),
+            runtime=runtime,
         )
 
     labs = recommend_labs(gaps=report.get("gaps", []), limit=3)
@@ -189,9 +195,10 @@ def finish_session(session_id: str) -> dict:
     lab_ids = [l["id"] for l in labs]
     store.update_mock_session(
         session_id,
+        user_id,
         stage="DEBRIEF",
         scores=report.get("scores"),
         report=report,
         recommended_lab_ids=lab_ids,
     )
-    return store.get_mock_session(session_id)
+    return store.get_mock_session(session_id, user_id)

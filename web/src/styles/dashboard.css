@@ -1,0 +1,30 @@
+.dashboard-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); margin-bottom: var(--space-4); }
+.dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(17rem, 0.75fr); gap: var(--space-4); align-items: start; }
+.dashboard-queue { grid-row: span 2; }
+.training-task-list { display: grid; gap: var(--space-2); }
+.training-task { display: grid; grid-template-columns: 2.4rem 1fr auto; align-items: center; gap: var(--space-3); min-height: 5rem; padding: var(--space-3); border: 1px solid var(--border); border-left: 3px solid var(--color-steel); border-radius: var(--radius-xs); background: rgb(7 20 27 / 48%); transition: border-color var(--motion-fast) var(--ease-out), transform var(--motion-fast) var(--ease-out); }
+.training-task:hover { border-color: rgb(103 199 241 / 46%); transform: translateX(2px); }
+.training-task[data-status="current"] { border-left-color: var(--color-signal); background: linear-gradient(90deg, var(--color-signal-soft), rgb(7 20 27 / 28%) 60%); }
+.training-task[data-status="attention"] { border-left-color: var(--color-thermal); }
+.training-task__index { color: var(--color-steel); font-family: var(--mono); font-size: 0.76rem; }
+.training-task__copy h3, .training-task__copy p { margin: 0; }
+.training-task__copy h3 { font-size: 0.95rem; }
+.training-task__copy p { margin-top: var(--space-1); color: var(--text-muted); font-size: 0.78rem; }
+.training-task__action { white-space: nowrap; }
+.dashboard-start { width: 100%; margin-top: var(--space-4); justify-content: center; }
+.skill-signal-list { display: grid; gap: var(--space-4); }
+.skill-signal > div { display: flex; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-2); font-size: 0.82rem; }
+.skill-signal strong { color: var(--color-signal); font-family: var(--mono); }
+.skill-signal__track { display: block; height: 0.35rem; overflow: hidden; border-radius: var(--radius-pill); background: rgb(129 149 157 / 17%); }
+.skill-signal__track > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--color-signal), var(--color-signal-strong)); }
+
+@media (max-width: 1199px) {
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .dashboard-queue { grid-row: auto; }
+}
+
+@media (max-width: 620px) {
+  .dashboard-metrics { grid-template-columns: 1fr; }
+  .training-task { grid-template-columns: 2rem 1fr; }
+  .training-task__action { grid-column: 2; justify-self: start; }
+}

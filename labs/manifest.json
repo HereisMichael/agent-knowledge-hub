@@ -65,5 +65,50 @@
     "effort_hours": 3,
     "weakness_tags": ["architecture", "rag"],
     "steps": ["选一段会议记录", "提炼功能/非功能需求", "输出 SRS 目录与风险项"]
+  },
+  {
+    "id": "lab-llm101-gpt-build",
+    "title": "从零实现小型 GPT 并验证输出",
+    "source_exercise_id": "llm101-gpt-build-01",
+    "effort_hours": 8,
+    "skills": ["transformer", "python", "training"],
+    "weakness_tags": ["architecture", "transformer", "training"],
+    "steps": ["建立最小模型与训练脚本", "运行小样本训练并记录损失", "编写生成与回归测试"]
+  },
+  {
+    "id": "lab-llm101-llama-build",
+    "title": "实现 Llama 关键模块并做数值检查",
+    "source_exercise_id": "llm101-llama-build-01",
+    "effort_hours": 6,
+    "skills": ["transformer", "python", "inference"],
+    "weakness_tags": ["architecture", "inference"],
+    "steps": ["实现关键模块接口", "比较参考形状与数值", "记录性能与误差"]
+  },
+  {
+    "id": "lab-llm101-moe-build",
+    "title": "实现 MoE 路由与负载观测",
+    "source_exercise_id": "llm101-moe-build-01",
+    "effort_hours": 6,
+    "skills": ["moe", "python", "training"],
+    "weakness_tags": ["architecture", "training"],
+    "steps": ["实现路由接口", "记录专家分配分布", "添加边界与回归测试"]
+  },
+  {
+    "id": "lab-llm101-rag-build",
+    "title": "构建可评测的 RAG 服务",
+    "source_exercise_id": "llm101-rag-build-01",
+    "effort_hours": 6,
+    "skills": ["rag", "python", "evaluation"],
+    "weakness_tags": ["rag", "retrieval"],
+    "steps": ["实现数据索引与检索接口", "建立小型问答评测集", "记录引文正确率与失败案例"]
+  },
+  {
+    "id": "lab-llm101-rlhf-build",
+    "title": "搭建奖励训练最小流水线",
+    "source_exercise_id": "llm101-rlhf-build-01",
+    "effort_hours": 8,
+    "skills": ["rlhf", "python", "training"],
+    "weakness_tags": ["training", "evaluation"],
+    "steps": ["准备可重复的输入与基线", "运行最小训练迭代", "比较奖励与质量指标"]
   }
 ]

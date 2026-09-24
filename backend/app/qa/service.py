@@ -27,9 +27,14 @@ def ask(question: str, corpus: str = "all", top_k: int = 6) -> dict:
         cites = list(allowed)[:3]
         parts = [f"根据知识库 [{c}]：" for c in cites]
         body = "\n".join(f"- {c.text[:200]}..." for c in chunks[:3]) if chunks else "未命中知识库。"
+        citation_details = [
+            {"source_id": c.source_id, "path": c.path, "excerpt": c.text[:300]}
+            for c in chunks[:5]
+        ]
         return {
             "answer": "（Demo）" + "\n".join(parts) + "\n" + body,
-            "citations": [{"source_id": c.source_id, "path": c.path, "excerpt": c.text[:300]} for c in chunks[:5]],
+            "citations": cites,
+            "citation_details": citation_details,
         }
 
     system = (

@@ -1,0 +1,21 @@
+.jd-result { display: grid; gap: var(--space-4); }
+.jd-result-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+.jd-result-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
+.jd-responsibilities { margin: 0; padding-left: 1.4rem; }
+.jd-responsibilities li { padding: var(--space-2) 0; color: var(--text-muted); }
+.jd-skill-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.jd-skill-groups section { padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-xs); }
+.jd-skill-groups h3 { margin: 0 0 var(--space-3); color: var(--color-signal); font-size: 0.82rem; }
+.jd-skill-groups section > div { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.jd-skill-groups span { padding: var(--space-1) var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-pill); color: var(--text-muted); font-size: 0.74rem; }
+.jd-samples { display: grid; gap: var(--space-2); }
+.jd-samples .btn { justify-content: flex-start; text-align: left; }
+.jd-history-list { display: grid; gap: var(--space-2); }
+.jd-history-item { display: grid; grid-template-columns: 1fr auto; gap: var(--space-2); align-items: center; padding: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-xs); }
+.jd-history-item__open { display: grid; gap: var(--space-1); min-width: 0; padding: var(--space-1); border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.jd-history-item__open strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.82rem; }
+.jd-history-item__open span, .jd-history-item__open small { color: var(--text-muted); font-size: 0.7rem; }
+
+@media (max-width: 620px) {
+  .jd-result-metrics, .jd-skill-groups { grid-template-columns: 1fr; }
+}
